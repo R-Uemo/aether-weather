@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AETHER // Atmospheric Weather</title>
+
+    <!-- PWA / スマホのホーム画面追加＆フルスクリーン起動設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AETHER">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#090d16">
+    <!-- 専用アプリアイコン（URLエンコードSVG） -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23090d16'/%3E%3Cstop offset='100%25' stop-color='%231b4d89'/%3E%3C/linearGradient%3E%3CradialGradient id='orb' cx='35%25' cy='35%25' r='65%25'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='55%25' stop-color='%23fef08a'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b' stop-opacity='0.2'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='116' fill='url(%23bg)'/%3E%3Ccircle cx='256' cy='256' r='165' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='4'/%3E%3Ccircle cx='256' cy='91' r='9' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='256' r='110' fill='url(%23orb)'/%3E%3C/svg%3E">
+    <link id="apple-touch-icon" rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23090d16'/%3E%3Cstop offset='100%25' stop-color='%231b4d89'/%3E%3C/linearGradient%3E%3CradialGradient id='orb' cx='35%25' cy='35%25' r='65%25'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='55%25' stop-color='%23fef08a'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b' stop-opacity='0.2'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23bg)'/%3E%3Ccircle cx='256' cy='256' r='165' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='4'/%3E%3Ccircle cx='256' cy='91' r='9' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='256' r='110' fill='url(%23orb)'/%3E%3C/svg%3E">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cormorant Garamond, Syne, JetBrains Mono, Noto Sans JP -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        display: ['Syne', '"Noto Sans JP"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 基本設定とカラー変数 */
+        :root {
+            --bg-top: #090d16;
+            --bg-mid: #162238;
+            --bg-bot: #273c59;
+            --orb-core: #fef08a;
+            --orb-glow: rgba(251, 191, 36, 0.35);
+            --accent: #7dd3fc;
+            --hairline: rgba(255, 255, 255, 0.13);
+            --surface: rgba(255, 255, 255, 0.035);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: #05070c;
+            color: #f8fafc;
+            overflow-x: hidden;
+            font-feature-settings: "palt";
+            -webkit-font-smoothing: antialiased;
+            /* ノッチ・ホームバー領域へのセーフエリア対応 */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* 動的背景グラデーションレイヤー */
+        #sky-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-mid) 52%, var(--bg-bot) 100%);
+            transition: background 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* フィルムグレイン（微細なノイズ質感でラグジュアリーさを演出） */
+        .film-grain {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.045;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* パーティクル＆大気シミュレーション用キャンバス */
+        #atmosphere-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* エディトリアル・サーフェス（極薄すりガラス＋ヘアライン） */
+        .atelier-card {
+            background: var(--surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--hairline);
+            transition: border-color 0.4s ease, background-color 0.4s ease;
+        }
+
+        .atelier-card:hover {
+            border-color: rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.055);
+        }
+
+        /* 彫刻的な天体オーブ（太陽・月・雨雲の抽象アート） */
+        .celestial-sculpture {
+            position: relative;
+            width: clamp(104px, 27vw, 240px);
+            height: clamp(104px, 27vw, 240px);
+            border-radius: 50%;
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .celestial-core {
+            position: absolute;
+            inset: 14%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 30%, #ffffff 0%, var(--orb-core) 45%, rgba(255,255,255,0.05) 100%);
+            box-shadow: 0 0 80px var(--orb-glow), inset -18px -18px 36px rgba(0,0,0,0.35);
+            transition: all 1s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .celestial-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            animation: slowSpin 38s linear infinite;
+        }
+
+        .celestial-ring::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 12px #ffffff;
+        }
+
+        .celestial-ring-outer {
+            position: absolute;
+            inset: -14%;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            animation: slowSpinReverse 60s linear infinite;
+        }
+
+        /* 雲や雨の時のガラス・ベール（オーブ前面のすりガラス層） */
+        .celestial-veil {
+            position: absolute;
+            bottom: 4%;
+            left: -8%;
+            right: -8%;
+            height: 44%;
+            border-radius: 9999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 100%);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.18);
+            opacity: 0;
+            transform: translateY(16px);
+            transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .celestial-veil.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes slowSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slowSpinReverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        /* カスタムレンジスライダー（タイムスクラバー） */
+        input[type="range"].time-scrubber {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.18);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].time-scrubber::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
+            cursor: grab;
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"].time-scrubber::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        input[type="range"].time-scrubber::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
+            cursor: grab;
+        }
+
+        /* SVGパスのアニメーション用 */
+        .temp-curve-path {
+            transition: d 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* スクロールバー非表示（横スクロール領域） */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* トースト通知アニメーション */
+        #toast-box {
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-white/25 selection:text-white">
+
+    <!-- 動的グラデーション背景 -->
+    <div id="sky-backdrop"></div>
+    <!-- 大気パーティクル・キャンバス -->
+    <canvas id="atmosphere-canvas"></canvas>
+    <!-- フィルムグレイン質感 -->
+    <div class="film-grain"></div>
+
+    <!-- メインアプリケーションコンテナ -->
+    <div class="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-8 lg:px-10 py-3.5 sm:py-7 flex-grow flex flex-col gap-3.5 sm:gap-6">
+
+        <!-- トップナビゲーション（エディトリアル・マストヘッド） -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-3 border-b border-white/15">
+            <div class="flex items-center justify-between md:justify-start gap-4">
+                <div class="flex items-center gap-2.5">
+                    <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"></span>
+                    <h1 class="font-display font-bold tracking-[0.26em] text-xs sm:text-sm uppercase">Aether</h1>
+                    <span id="data-source-badge" class="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded-full border border-white/20 text-white/75 uppercase">SYNC...</span>
+                </div>
+                <div class="flex items-center gap-2 font-mono text-[10px] sm:text-[11px] tracking-widest text-white/55 uppercase">
+                    <span id="today-date-label">----.--.--</span>
+                    <span class="hidden sm:inline text-white/25">/</span>
+                    <span id="coord-label" class="hidden sm:inline">34.7186° N, 136.5057° E</span>
+                </div>
+            </div>
+
+            <!-- 都市選択ピル（現在地GPS＋主要都市） -->
+            <nav aria-label="都市選択" class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                <button onclick="useCurrentLocation()" data-city="gps" class="city-btn inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent text-white/70 hover:text-white hover:bg-white/10 whitespace-nowrap cursor-pointer">
+                    <i data-lucide="locate-fixed" class="w-3 h-3"></i>
+                    <span>現在地</span>
+                </button>
+                <button onclick="selectCity('tsu')" data-city="tsu" class="city-btn px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent whitespace-nowrap cursor-pointer">津</button>
+                <button onclick="selectCity('tokyo')" data-city="tokyo" class="city-btn px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent whitespace-nowrap cursor-pointer">東京</button>
+                <button onclick="selectCity('kyoto')" data-city="kyoto" class="city-btn px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent whitespace-nowrap cursor-pointer">京都</button>
+                <button onclick="selectCity('sapporo')" data-city="sapporo" class="city-btn px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent whitespace-nowrap cursor-pointer">札幌</button>
+                <button onclick="selectCity('okinawa')" data-city="okinawa" class="city-btn px-3 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent whitespace-nowrap cursor-pointer">那覇</button>
+            </nav>
+        </header>
+
+        <!-- 上段配置：エディトリアル・ライフスタイルノート（ひと目で今日のポイントを確認） -->
+        <section class="atelier-card rounded-2xl px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-5">
+            <div class="flex items-start gap-2.5 sm:gap-3.5">
+                <div class="font-serif italic text-xl sm:text-2xl text-white/35 leading-none select-none mt-0.5">“</div>
+                <div class="min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-[9px] sm:text-[10px] tracking-[0.22em] text-white/45 uppercase">Today's Note</span>
+                        <span id="metric-aqi-mobile" class="sm:hidden font-mono text-[9px] tracking-wider text-emerald-300">AQI 22 // PURE</span>
+                    </div>
+                    <p id="editorial-note" class="font-sans text-xs sm:text-sm text-white/90 font-light leading-relaxed mt-0.5">
+                        日中は穏やかな光が差し込み、軽やかなウールジャケットで快適に過ごせます。日が傾くと伊勢湾からの風が冷たくなるため、ストールを携えると安心です。
+                    </p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center shrink-0 border-l border-white/10 pl-5 font-mono text-xs">
+                <div>
+                    <span class="text-[9px] text-white/40 block uppercase">Air Quality</span>
+                    <span id="metric-aqi" class="text-emerald-300">22 // PURE</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ヒーローセクション：モバイルでも1画面に収まるコンパクトな2カラム構成 -->
+        <section class="grid grid-cols-12 gap-3 sm:gap-6 items-center py-1 sm:py-2">
+
+            <!-- 左側：ロケーション＆大型セリフ気温表示 -->
+            <div class="col-span-7 sm:col-span-7 flex flex-col justify-between gap-2.5 sm:gap-4">
+                <div>
+                    <div class="flex items-center gap-2 font-mono text-[10px] sm:text-xs tracking-[0.16em] text-white/60 uppercase mb-1.5">
+                        <span id="time-phase-badge" class="px-2 py-0.5 rounded-full border border-white/20 text-white/90">MIDDAY</span>
+                        <span id="active-clock">12:00 JST</span>
+                    </div>
+                    <h2 id="city-title" class="font-sans font-light text-xl sm:text-4xl tracking-tight text-white">三重県 津市</h2>
+                    <p id="weather-poetic" class="font-serif italic text-sm sm:text-xl text-white/75 mt-0.5 tracking-wide truncate">Crisp autumn sunlight over Ise Bay</p>
+                    <p id="weather-ja" class="font-sans text-[11px] sm:text-sm text-white/60 mt-0.5">澄み渡る秋晴れ・心地よい北西の風</p>
+                </div>
+
+                <!-- 温度ディスプレイ -->
+                <div class="flex items-end gap-4 sm:gap-8 pt-1">
+                    <div class="flex items-start leading-none">
+                        <span id="main-temp" class="font-serif font-light text-[4.5rem] sm:text-[8.5rem] tracking-tighter leading-[0.82] text-white">17</span>
+                        <span class="font-serif text-2xl sm:text-5xl font-light text-white/60 mt-1 ml-0.5">°</span>
+                    </div>
+
+                    <div class="hidden sm:flex flex-col gap-2 pb-1 border-l border-white/15 pl-5 font-mono text-xs">
+                        <div class="flex items-center justify-between gap-6">
+                            <span class="text-white/45 uppercase tracking-wider">High / Low</span>
+                            <span class="text-white/90"><span class="hi-temp-val">18°</span> / <span class="lo-temp-val">9°</span></span>
+                        </div>
+                        <div class="flex items-center justify-between gap-6">
+                            <span class="text-white/45 uppercase tracking-wider">Feels Like</span>
+                            <span class="feels-temp-val text-white/90">16°C</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-6">
+                            <span class="text-white/45 uppercase tracking-wider">Precip</span>
+                            <span class="precip-val text-sky-300">10%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：インタラクティブ天体スカルプチャー -->
+            <div class="col-span-5 sm:col-span-5 flex flex-col items-center justify-center relative py-1">
+                <div id="celestial-wrap" class="celestial-sculpture flex items-center justify-center">
+                    <div class="celestial-ring-outer"></div>
+                    <div class="celestial-ring"></div>
+                    <div id="celestial-core" class="celestial-core"></div>
+                    <!-- 曇り・雨の時に現れるすりガラスベール -->
+                    <div id="celestial-veil" class="celestial-veil"></div>
+                </div>
+                <div class="mt-3 sm:mt-5 font-mono text-[9px] sm:text-[11px] tracking-[0.18em] text-white/50 uppercase text-center">
+                    <span id="sky-state-code">CLEAR</span>
+                </div>
+            </div>
+
+            <!-- モバイル専用：コンパクト統計ストリップ（High/Low・体感・降水確率） -->
+            <div class="col-span-12 sm:hidden grid grid-cols-3 gap-2 pt-2 border-t border-white/10 font-mono text-[10px]">
+                <div class="flex flex-col">
+                    <span class="text-white/40 uppercase">High / Low</span>
+                    <span class="text-white/90 mt-0.5"><span class="hi-temp-val">18°</span> / <span class="lo-temp-val">9°</span></span>
+                </div>
+                <div class="flex flex-col border-l border-white/10 pl-3">
+                    <span class="text-white/40 uppercase">Feels Like</span>
+                    <span class="feels-temp-val text-white/90 mt-0.5">16°C</span>
+                </div>
+                <div class="flex flex-col border-l border-white/10 pl-3">
+                    <span class="text-white/40 uppercase">Precip</span>
+                    <span class="precip-val text-sky-300 mt-0.5">10%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- インタラクティブ 24時間・大気タイムライン＆カスタムSVG温度曲線 -->
+        <section class="atelier-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-3.5 sm:gap-5">
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <span class="font-mono text-[9px] sm:text-[10px] tracking-[0.22em] text-white/45 uppercase">Diurnal Curve</span>
+                    <h3 class="font-sans text-sm sm:text-base font-medium text-white/95">今日1日の空と気温</h3>
+                </div>
+
+                <!-- 1日自動再生ボタン -->
+                <button id="autoplay-btn" onclick="toggleAutoPlay()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 transition text-[11px] font-mono tracking-wider uppercase cursor-pointer">
+                    <span id="autoplay-icon-wrap" class="inline-flex"><i data-lucide="play" class="w-3 h-3"></i></span>
+                    <span id="autoplay-text">Play Day</span>
+                </button>
+            </div>
+
+            <!-- カスタムSVG 温度カーブ -->
+            <div class="relative w-full h-24 sm:h-36 select-none">
+                <svg id="curve-svg" viewBox="0 0 800 160" preserveAspectRatio="none" class="w-full h-full overflow-visible">
+                    <defs>
+                        <linearGradient id="curveAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="rgba(255, 255, 255, 0.28)" />
+                            <stop offset="100%" stop-color="rgba(255, 255, 255, 0.0)" />
+                        </linearGradient>
+                    </defs>
+                    <!-- ガイドライン -->
+                    <line x1="0" y1="40" x2="800" y2="40" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 6" />
+                    <line x1="0" y1="100" x2="800" y2="100" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 6" />
+                    <!-- 塗りつぶしエリア -->
+                    <path id="curve-area" class="temp-curve-path" fill="url(#curveAreaGrad)" d="" />
+                    <!-- メインライン -->
+                    <path id="curve-line" class="temp-curve-path" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2" d="" />
+                    <!-- アクティブ時刻の垂直インジケーター -->
+                    <line id="active-vline" x1="0" y1="0" x2="0" y2="155" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-dasharray="3 3" />
+                    <!-- アクティブノード -->
+                    <circle id="active-node-glow" cx="0" cy="0" r="14" fill="rgba(255,255,255,0.18)" />
+                    <circle id="active-node" cx="0" cy="0" r="5" fill="#ffffff" />
+                </svg>
+                <!-- データポイントのクリック用オーバーレイ -->
+                <div id="curve-labels" class="absolute inset-x-0 bottom-0 flex justify-between pointer-events-none px-1">
+                    <!-- JSで動的生成 -->
+                </div>
+            </div>
+
+            <!-- シームレス・タイムスクラバー -->
+            <div class="pt-1">
+                <input id="time-scrubber" type="range" min="0" max="7" step="1" value="3" class="time-scrubber" aria-label="時間帯を選択">
+                <div id="scrubber-ticks" class="grid grid-cols-8 gap-0.5 sm:gap-1 mt-2 text-center">
+                    <!-- JSで各時間のボタンを生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 洗練されたメトリクス・グリッド（モバイルではコンパクトな2×2グリッド） -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+
+            <!-- 1. 風速・風向コンパス -->
+            <div class="atelier-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col justify-between min-h-[130px] sm:min-h-[165px]">
+                <div class="flex items-center justify-between font-mono text-[9px] sm:text-[11px] tracking-[0.16em] text-white/45 uppercase">
+                    <span>Wind</span>
+                    <i data-lucide="wind" class="w-3.5 h-3.5 text-white/60"></i>
+                </div>
+                <div class="flex items-center justify-between my-1.5 sm:my-2">
+                    <div>
+                        <div class="flex items-baseline gap-1">
+                            <span id="metric-wind" class="font-serif text-2xl sm:text-4xl font-light text-white">3.2</span>
+                            <span class="font-mono text-[10px] sm:text-xs text-white/55">m/s</span>
+                        </div>
+                        <p id="metric-wind-dir" class="font-sans text-[11px] sm:text-xs text-white/70 mt-0.5">北西の風</p>
+                    </div>
+                    <!-- ミニマル方位計 -->
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/15 flex items-center justify-center relative shrink-0">
+                        <span class="absolute -top-2 bg-black/40 px-1 font-mono text-[8px] text-white/60">N</span>
+                        <div id="compass-needle" class="w-full h-full flex items-center justify-center transition-transform duration-700">
+                            <div class="w-0.5 h-5 sm:h-6 bg-gradient-to-t from-transparent via-white/60 to-white rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="font-mono text-[9px] text-white/45 tracking-wider uppercase">Breeze // Steady</div>
+            </div>
+
+            <!-- 2. 湿度・大気バランス -->
+            <div class="atelier-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col justify-between min-h-[130px] sm:min-h-[165px]">
+                <div class="flex items-center justify-between font-mono text-[9px] sm:text-[11px] tracking-[0.16em] text-white/45 uppercase">
+                    <span>Humidity</span>
+                    <i data-lucide="droplets" class="w-3.5 h-3.5 text-white/60"></i>
+                </div>
+                <div class="my-1.5 sm:my-2">
+                    <div class="flex items-baseline gap-1">
+                        <span id="metric-humidity" class="font-serif text-2xl sm:text-4xl font-light text-white">48</span>
+                        <span class="font-mono text-[10px] sm:text-xs text-white/55">%</span>
+                    </div>
+                    <!-- 精密セグメントバー -->
+                    <div class="grid grid-cols-10 gap-0.5 sm:gap-1 mt-2.5 sm:mt-3.5" id="humidity-segments">
+                        <!-- JSで10セグメント描画 -->
+                    </div>
+                </div>
+                <div id="metric-dew" class="font-sans text-[10px] sm:text-xs text-white/55 truncate">露点 5°C ・ 快適</div>
+            </div>
+
+            <!-- 3. UV指数・放射 -->
+            <div class="atelier-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col justify-between min-h-[130px] sm:min-h-[165px]">
+                <div class="flex items-center justify-between font-mono text-[9px] sm:text-[11px] tracking-[0.16em] text-white/45 uppercase">
+                    <span>UV Index</span>
+                    <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-white/60"></i>
+                </div>
+                <div class="my-1.5 sm:my-2">
+                    <div class="flex items-baseline gap-2">
+                        <span id="metric-uv" class="font-serif text-2xl sm:text-4xl font-light text-white">3</span>
+                        <span id="metric-uv-label" class="font-sans text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full border border-white/15 text-white/80">中程度</span>
+                    </div>
+                    <div class="w-full h-[2px] bg-white/15 mt-3 sm:mt-4 relative">
+                        <div id="uv-indicator" class="absolute top-1/2 -translate-y-1/2 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-white shadow-[0_0_8px_#fff] transition-all duration-700" style="left: 30%"></div>
+                    </div>
+                </div>
+                <div id="metric-uv-note" class="font-sans text-[10px] sm:text-xs text-white/55 truncate">日中は柔らかな日差し</div>
+            </div>
+
+            <!-- 4. 太陽軌道（日の出・日の入り） -->
+            <div class="atelier-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col justify-between min-h-[130px] sm:min-h-[165px]">
+                <div class="flex items-center justify-between font-mono text-[9px] sm:text-[11px] tracking-[0.16em] text-white/45 uppercase">
+                    <span>Solar Arc</span>
+                    <i data-lucide="sunrise" class="w-3.5 h-3.5 text-white/60"></i>
+                </div>
+                <div class="my-0.5">
+                    <svg viewBox="0 0 160 56" class="w-full h-10 sm:h-12 overflow-visible">
+                        <line x1="6" y1="46" x2="154" y2="46" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+                        <path d="M 14 46 Q 80 -8 146 46" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="3 3" />
+                        <path id="solar-progress-arc" d="M 14 46 Q 80 -8 146 46" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-dasharray="165" stroke-dashoffset="80" />
+                        <circle id="solar-dot" cx="80" cy="19" r="4" fill="#ffffff" />
+                        <circle id="solar-dot-glow" cx="80" cy="19" r="9" fill="rgba(255,255,255,0.2)" />
+                    </svg>
+                </div>
+                <div class="flex items-center justify-between font-mono text-[10px] sm:text-xs">
+                    <div>
+                        <span class="text-[8px] sm:text-[10px] text-white/40 block uppercase">Rise</span>
+                        <span id="metric-sunrise" class="text-white/90">06:34</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[8px] sm:text-[10px] text-white/40 block uppercase">Set</span>
+                        <span id="metric-sunset" class="text-white/90">16:48</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ミニマルフッター -->
+    <footer class="relative z-10 max-w-6xl w-full mx-auto px-4 sm:px-8 lg:px-10 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-1 text-[10px] font-mono text-white/35 tracking-widest uppercase">
+        <span>AETHER ATMOSPHERIC EDITION // OPEN-METEO LIVE</span>
+        <span>SLIDE TIMELINE TO EXPLORE THE DAY</span>
+    </footer>
+
+    <!-- 非侵入型トースト通知（alertの代替） -->
+    <div id="toast-box" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-slate-950/85 backdrop-blur-md border border-white/20 font-sans text-xs text-white/90 shadow-xl opacity-0 pointer-events-none translate-y-3 whitespace-nowrap">
+        <span id="toast-msg"></span>
+    </div>
+
+    <script>
+        /**
+         * 都市ごとの座標とオフライン時フォールバック用データ
+         * オンライン時は Open-Meteo API から今日のリアルタイム気象データを自動取得します。
+         */
+        const CITY_COORDS = {
+            tsu: { lat: 34.7186, lon: 136.5057, name: "三重県 津市", isTropical: false },
+            tokyo: { lat: 35.6580, lon: 139.7016, name: "東京都 渋谷区", isTropical: false },
+            kyoto: { lat: 35.0116, lon: 135.7681, name: "京都府 京都市", isTropical: false },
+            sapporo: { lat: 43.0618, lon: 141.3545, name: "北海道 札幌市", isTropical: false },
+            okinawa: { lat: 26.2124, lon: 127.6809, name: "沖縄県 那覇市", isTropical: true }
+        };
+
+        const CITIES = {
+            tsu: {
+                name: "三重県 津市",
+                coords: "34.7186° N, 136.5057° E",
+                high: 18,
+                low: 9,
+                sunrise: "06:34",
+                sunset: "16:48",
+                aqi: "22 // PURE",
+                note: "日中は穏やかな光が差し込み、軽やかなウールジャケットで快適に過ごせます。日が傾くと伊勢湾からの風が冷たくなるため、ストールを携えると安心です。",
+                slots: [
+                    { time: "03:00", phase: "DEEP NIGHT", sky: "night", cond: "clear", temp: 9, feels: 7, precip: 5, wind: 2.1, dir: "北西", deg: 310, hum: 64, uv: 0, poetic: "Silent stars above calm waters", ja: "静寂の星空・凛とした夜気" },
+                    { time: "06:00", phase: "DAWN", sky: "dawn", cond: "clear", temp: 10, feels: 8, precip: 5, wind: 2.4, dir: "北西", deg: 315, hum: 62, uv: 1, poetic: "Pale rose light touching the horizon", ja: "薄紅の夜明け・澄んだ朝の空気" },
+                    { time: "09:00", phase: "MORNING", sky: "morning", cond: "clear", temp: 14, feels: 13, precip: 10, wind: 2.8, dir: "北西", deg: 320, hum: 54, uv: 2, poetic: "Crisp morning clarity", ja: "爽やかな朝晴れ・心地よい陽気" },
+                    { time: "12:00", phase: "MIDDAY", sky: "midday", cond: "clear", temp: 17, feels: 16, precip: 10, wind: 3.2, dir: "北西", deg: 315, hum: 48, uv: 4, poetic: "Crisp autumn sunlight over Ise Bay", ja: "澄み渡る秋晴れ・穏やかな風" },
+                    { time: "15:00", phase: "AFTERNOON", sky: "afternoon", cond: "clear", temp: 18, feels: 17, precip: 10, wind: 3.5, dir: "西", deg: 280, hum: 45, uv: 3, poetic: "Warm golden hour approaching", ja: "柔らかな午後の光・絶好の外出日和" },
+                    { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 14, feels: 12, precip: 10, wind: 3.0, dir: "北西", deg: 305, hum: 55, uv: 0, poetic: "Amber twilight melting into indigo", ja: "茜色から藍色へ移ろう夕暮れ" },
+                    { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 11, feels: 9, precip: 5, wind: 2.5, dir: "北西", deg: 315, hum: 60, uv: 0, poetic: "Velvet night sky with crisp air", ja: "澄み切った夜空・冷え込みに注意" },
+                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 10, feels: 8, precip: 5, wind: 2.0, dir: "北", deg: 350, hum: 65, uv: 0, poetic: "Deep stillness under starlight", ja: "静かな星月夜・穏やかな深夜" }
+                ]
+            },
+            tokyo: {
+                name: "東京都 渋谷区",
+                coords: "35.6580° N, 139.7016° E",
+                high: 19,
+                low: 10,
+                sunrise: "06:25",
+                sunset: "16:31",
+                aqi: "31 // GOOD",
+                note: "乾いた秋風が心地よい都会の午後。夕暮れ時はビルのガラスに黄金色の光が反射します。夜はライトコートで軽快な散策が楽しめます。",
+                slots: [
+                    { time: "03:00", phase: "DEEP NIGHT", sky: "night", cond: "clear", temp: 10, feels: 9, precip: 10, wind: 1.8, dir: "北", deg: 10, hum: 58, uv: 0, poetic: "City lights humming in cool air", ja: "静かな都市の夜・澄んだ空気" },
+                    { time: "06:00", phase: "DAWN", sky: "dawn", cond: "clear", temp: 11, feels: 10, precip: 10, wind: 2.0, dir: "北東", deg: 35, hum: 56, uv: 1, poetic: "Soft apricot dawn over the skyline", ja: "柔らかな朝焼け・穏やかな目覚め" },
+                    { time: "09:00", phase: "MORNING", sky: "morning", cond: "clear", temp: 15, feels: 14, precip: 10, wind: 2.2, dir: "北東", deg: 45, hum: 49, uv: 3, poetic: "Bright sky stretching across the city", ja: "快晴の朝・清々しい陽気" },
+                    { time: "12:00", phase: "MIDDAY", sky: "midday", cond: "clear", temp: 18, feels: 17, precip: 15, wind: 2.5, dir: "北東", deg: 45, hum: 44, uv: 4, poetic: "High autumn sun with light breeze", ja: "晴れ・乾いた心地よい空気" },
+                    { time: "15:00", phase: "AFTERNOON", sky: "afternoon", cond: "cloudy", temp: 19, feels: 18, precip: 15, wind: 2.9, dir: "東", deg: 85, hum: 46, uv: 2, poetic: "Delicate clouds drifting in warm light", ja: "薄雲が広がる穏やかな午後" },
+                    { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 15, feels: 14, precip: 10, wind: 2.6, dir: "東", deg: 95, hum: 52, uv: 0, poetic: "Crimson horizon behind glass towers", ja: "ドラマチックな黄金色の夕暮れ" },
+                    { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 13, feels: 11, precip: 10, wind: 2.1, dir: "北東", deg: 50, hum: 56, uv: 0, poetic: "Clear indigo evening in the metropolis", ja: "クリアな夜空・過ごしやすい夜" },
+                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 11, feels: 10, precip: 10, wind: 1.9, dir: "北", deg: 15, hum: 59, uv: 0, poetic: "Tranquil midnight glow", ja: "穏やかな深夜・冷え込みは緩やか" }
+                ]
+            },
+            kyoto: {
+                name: "京都府 京都市",
+                coords: "35.0116° N, 135.7681° E",
+                high: 15,
+                low: 8,
+                sunrise: "06:37",
+                sunset: "16:47",
+                aqi: "18 // PURE",
+                note: "古都の石畳をしっとりと濡らす銀色の雨。撥水性のあるトレンチコートと傘が似合う一日です。夜には雨が上がり、霧を帯びた幻想的な夜空が広がります。",
+                slots: [
+                    { time: "03:00", phase: "DEEP NIGHT", sky: "rain-night", cond: "cloudy", temp: 9, feels: 8, precip: 40, wind: 1.5, dir: "北", deg: 0, hum: 78, uv: 0, poetic: "Low mist gathering over the hills", ja: "しっとりとした曇り空・静かな夜" },
+                    { time: "06:00", phase: "DAWN", sky: "rain-day", cond: "rain", temp: 10, feels: 8, precip: 70, wind: 1.8, dir: "北", deg: 10, hum: 84, uv: 0, poetic: "Gentle rain awakening ancient eaves", ja: "しとしとと降る静かな朝の雨" },
+                    { time: "09:00", phase: "MORNING", sky: "rain-day", cond: "rain", temp: 12, feels: 10, precip: 80, wind: 2.1, dir: "北", deg: 5, hum: 86, uv: 1, poetic: "Silver droplets on autumn foliage", ja: "紅葉を濡らす繊細な雨" },
+                    { time: "12:00", phase: "MIDDAY", sky: "rain-day", cond: "rain", temp: 14, feels: 12, precip: 85, wind: 2.3, dir: "北北西", deg: 345, hum: 88, uv: 1, poetic: "Poetic rainfall through misty air", ja: "風情ある古都の雨・肌寒い午後" },
+                    { time: "15:00", phase: "AFTERNOON", sky: "rain-day", cond: "rain", temp: 15, feels: 13, precip: 75, wind: 2.0, dir: "北", deg: 0, hum: 85, uv: 1, poetic: "Soft drizzle tapering off", ja: "小雨交じり・次第に雨足は弱まる" },
+                    { time: "18:00", phase: "DUSK", sky: "cloudy-dusk", cond: "cloudy", temp: 12, feels: 10, precip: 35, wind: 1.6, dir: "北", deg: 15, hum: 80, uv: 0, poetic: "Clearing mist after the rain", ja: "雨上がりの霞んだ夕暮れ" },
+                    { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 10, feels: 8, precip: 15, wind: 1.4, dir: "北", deg: 5, hum: 76, uv: 0, poetic: "Washed air revealing crisp stars", ja: "雨上がりの澄み切った夜空" },
+                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 8, feels: 6, precip: 10, wind: 1.2, dir: "北", deg: 0, hum: 78, uv: 0, poetic: "Cool serenity in the valley", ja: "底冷えのする静かな深夜" }
+                ]
+            },
+            sapporo: {
+                name: "北海道 札幌市",
+                coords: "43.0618° N, 141.3545° E",
+                high: 6,
+                low: -2,
+                sunrise: "06:36",
+                sunset: "16:04",
+                aqi: "14 // PURE",
+                note: "冬の気配を色濃く感じる凛とした空気。午後から細かな粉雪が舞う可能性があります。上質なダウンやウールコートで暖かくお過ごしください。",
+                slots: [
+                    { time: "03:00", phase: "DEEP NIGHT", sky: "night", cond: "snow", temp: -2, feels: -6, precip: 45, wind: 4.0, dir: "北西", deg: 325, hum: 74, uv: 0, poetic: "Silent frost crystallizing in the dark", ja: "氷点下の静寂・ちらつく粉雪" },
+                    { time: "06:00", phase: "DAWN", sky: "cloudy-day", cond: "cloudy", temp: -1, feels: -5, precip: 35, wind: 4.2, dir: "北西", deg: 330, hum: 72, uv: 0, poetic: "Silver-blue winter dawn", ja: "銀色の冷たい夜明け・厚い雲" },
+                    { time: "09:00", phase: "MORNING", sky: "cloudy-day", cond: "cloudy", temp: 3, feels: -1, precip: 30, wind: 4.5, dir: "北北西", deg: 340, hum: 68, uv: 1, poetic: "Crisp northern air beneath pale clouds", ja: "曇り・凛と引き締まった冬の空気" },
+                    { time: "12:00", phase: "MIDDAY", sky: "cloudy-day", cond: "cloudy", temp: 6, feels: 2, precip: 25, wind: 4.8, dir: "北北西", deg: 340, hum: 64, uv: 1, poetic: "Diffused winter light over the plains", ja: "曇り時々晴れ・風は冷たく強い" },
+                    { time: "15:00", phase: "AFTERNOON", sky: "cloudy-day", cond: "snow", temp: 4, feels: 0, precip: 55, wind: 5.0, dir: "北西", deg: 320, hum: 72, uv: 0, poetic: "Delicate snowflakes drifting on the wind", ja: "ちらつく雪・急速に気温が低下" },
+                    { time: "18:00", phase: "DUSK", sky: "rain-night", cond: "snow", temp: 1, feels: -3, precip: 60, wind: 4.6, dir: "北西", deg: 325, hum: 76, uv: 0, poetic: "Blue hour veiled in quiet snow", ja: "雪の舞う幻想的な薄暮" },
+                    { time: "21:00", phase: "EVENING", sky: "night", cond: "snow", temp: -1, feels: -5, precip: 50, wind: 4.1, dir: "北西", deg: 330, hum: 78, uv: 0, poetic: "Diamond dust shimmering in night air", ja: "氷点下の雪夜・路面凍結に注意" },
+                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: -2, feels: -6, precip: 20, wind: 3.5, dir: "北", deg: 350, hum: 75, uv: 0, poetic: "Crystalline arctic stillness", ja: "雲が切れ、凍てつく星空へ" }
+                ]
+            },
+            okinawa: {
+                name: "沖縄県 那覇市",
+                coords: "26.2124° N, 127.6809° E",
+                high: 26,
+                low: 20,
+                sunrise: "06:55",
+                sunset: "17:38",
+                aqi: "16 // PURE",
+                note: "ターコイズブルーの海風が吹き抜ける南国の陽気。リネンシャツや軽やかな装いが映える一日です。強い日差しにはサングラスのアクセントを。",
+                slots: [
+                    { time: "03:00", phase: "DEEP NIGHT", sky: "night", cond: "clear", temp: 20, feels: 20, precip: 5, wind: 3.4, dir: "東", deg: 90, hum: 70, uv: 0, poetic: "Warm ocean breeze under southern stars", ja: "心地よい南国の夜風・穏やかな星空" },
+                    { time: "06:00", phase: "DAWN", sky: "dawn", cond: "clear", temp: 21, feels: 21, precip: 5, wind: 3.6, dir: "東", deg: 85, hum: 68, uv: 1, poetic: "Coral pink sunrise over the East China Sea", ja: "珊瑚色に染まる穏やかな夜明け" },
+                    { time: "09:00", phase: "MORNING", sky: "tropical", cond: "clear", temp: 23, feels: 24, precip: 5, wind: 3.9, dir: "東", deg: 90, hum: 64, uv: 5, poetic: "Brilliant turquoise sky and soft trade winds", ja: "突き抜ける青空・爽やかな潮風" },
+                    { time: "12:00", phase: "MIDDAY", sky: "tropical", cond: "clear", temp: 25, feels: 26, precip: 5, wind: 4.1, dir: "東", deg: 90, hum: 60, uv: 8, poetic: "Radiant subtropical sun at zenith", ja: "眩い快晴・夏のような陽気" },
+                    { time: "15:00", phase: "AFTERNOON", sky: "tropical", cond: "clear", temp: 26, feels: 26, precip: 10, wind: 4.3, dir: "東南東", deg: 110, hum: 58, uv: 6, poetic: "Luminous afternoon warmth", ja: "光あふれる午後・海辺の散策に最適" },
+                    { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 23, feels: 23, precip: 10, wind: 3.8, dir: "東", deg: 95, hum: 65, uv: 0, poetic: "Fiery gold sunset over emerald waters", ja: "水平線を染める壮麗なサンセット" },
+                    { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 21, feels: 21, precip: 5, wind: 3.5, dir: "東", deg: 90, hum: 68, uv: 0, poetic: "Balmy island night", ja: "半袖でも心地よい穏やかな夜" },
+                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 20, feels: 20, precip: 5, wind: 3.2, dir: "東", deg: 85, hum: 70, uv: 0, poetic: "Endless rhythm of night waves", ja: "星が瞬く静かな南国の深夜" }
+                ]
+            }
+        };
+
+        // 空のムードごとのカラーパレット（背景グラデーション＆天体オーブ）
+        const SKY_PALETTES = {
+            dawn: {
+                top: "#171c36", mid: "#4b385c", bot: "#c97b63",
+                core: "#fed7aa", glow: "rgba(251, 146, 60, 0.45)"
+            },
+            morning: {
+                top: "#0e2a47", mid: "#215c8a", bot: "#64a4c4",
+                core: "#fef08a", glow: "rgba(253, 224, 71, 0.4)"
+            },
+            midday: {
+                top: "#0a2240", mid: "#1b4d89", bot: "#4a8cc7",
+                core: "#ffffff", glow: "rgba(186, 230, 253, 0.5)"
+            },
+            afternoon: {
+                top: "#102542", mid: "#2c537a", bot: "#94847a",
+                core: "#fde68a", glow: "rgba(251, 191, 36, 0.45)"
+            },
+            tropical: {
+                top: "#062c43", mid: "#05668d", bot: "#02a9b8",
+                core: "#fef9c3", glow: "rgba(254, 240, 138, 0.55)"
+            },
+            sunset: {
+                top: "#14112e", mid: "#63264a", bot: "#d96b38",
+                core: "#fb923c", glow: "rgba(249, 115, 22, 0.55)"
+            },
+            twilight: {
+                top: "#070b19", mid: "#131e3a", bot: "#243456",
+                core: "#e0e7ff", glow: "rgba(165, 180, 252, 0.35)"
+            },
+            night: {
+                top: "#04060d", mid: "#0b1121", bot: "#162038",
+                core: "#f1f5f9", glow: "rgba(226, 232, 240, 0.3)"
+            },
+            "cloudy-day": {
+                top: "#18212f", mid: "#2d3a4b", bot: "#4f6073",
+                core: "#cbd5e1", glow: "rgba(203, 213, 225, 0.25)"
+            },
+            "cloudy-dusk": {
+                top: "#131724", mid: "#2c3144", bot: "#594c5c",
+                core: "#cbd5e1", glow: "rgba(203, 213, 225, 0.2)"
+            },
+            "rain-day": {
+                top: "#0c1524", mid: "#1a2b40", bot: "#2c4257",
+                core: "#94a3b8", glow: "rgba(125, 211, 252, 0.2)"
+            },
+            "rain-night": {
+                top: "#050912", mid: "#0f1a2b", bot: "#1c2a3e",
+                core: "#94a3b8", glow: "rgba(148, 163, 184, 0.18)"
+            }
+        };
+
+        // アプリ状態
+        let currentCityKey = 'tsu';
+        let currentSlotIndex = 3;
+        let currentCondition = 'clear';
+        let currentSky = 'midday';
+        let autoPlayTimer = null;
+        let toastTimer = null;
+        const liveCache = {}; // 取得済みリアルタイムデータのキャッシュ
+
+        // Lucideアイコンを安全に初期化
+        function safeCreateIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            safeCreateIcons();
+            registerDynamicManifest();
+            updateTodayDateLabel();
+            currentSlotIndex = getNearestSlotIndex();
+            initHumiditySegments();
+            initAtmosphereCanvas();
+            initParallax();
+
+            const scrubber = document.getElementById('time-scrubber');
+            scrubber.addEventListener('input', (e) => {
+                stopAutoPlay();
+                setTimeSlot(parseInt(e.target.value, 10));
+            });
+
+            selectCity('tsu');
+        });
+
+        // 湿度セグメント（10個）を初期化
+        function initHumiditySegments() {
+            const container = document.getElementById('humidity-segments');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const seg = document.createElement('div');
+                seg.className = 'h-1.5 rounded-full bg-white/15 transition-colors duration-500';
+                container.appendChild(seg);
+            }
+        }
+
+        // 単一ファイルでもAndroid等でフルスクリーンPWAとして認識させるための動的Manifest登録
+        function registerDynamicManifest() {
+            try {
+                const iconEl = document.querySelector('link[rel="icon"]');
+                if (!iconEl) return;
+                const manifest = {
+                    name: "AETHER Weather",
+                    short_name: "AETHER",
+                    start_url: ".",
+                    display: "standalone",
+                    background_color: "#090d16",
+                    theme_color: "#090d16",
+                    icons: [{ src: iconEl.href, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }]
+                };
+                const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+                const manifestLink = document.createElement('link');
+                manifestLink.rel = 'manifest';
+                manifestLink.href = URL.createObjectURL(blob);
+                document.head.appendChild(manifestLink);
+            } catch (e) {
+                console.warn('Manifest registration skipped:', e);
+            }
+        }
+
+        // 今日の日付をヘッダーに表示
+        function updateTodayDateLabel() {
+            const now = new Date();
+            const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            document.getElementById('today-date-label').textContent = `${y}.${m}.${d} ${days[now.getDay()]}`;
+        }
+
+        // 現在時刻に最も近い3時間スロット（03,06,09,12,15,18,21,24時）のインデックスを返す
+        function getNearestSlotIndex() {
+            const hour = new Date().getHours();
+            const targetHours = [3, 6, 9, 12, 15, 18, 21, 24];
+            let bestIdx = 3;
+            let minDiff = 99;
+            targetHours.forEach((th, idx) => {
+                const diff = Math.abs(hour - th);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    bestIdx = idx;
+                }
+            });
+            return bestIdx;
+        }
+
+        // トースト通知表示
+        function showToast(message) {
+            const box = document.getElementById('toast-box');
+            document.getElementById('toast-msg').textContent = message;
+            box.classList.remove('opacity-0', 'translate-y-3');
+            box.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                box.classList.add('opacity-0', 'translate-y-3');
+                box.classList.remove('opacity-100', 'translate-y-0');
+            }, 3200);
+        }
+
+        // ステータスバッジの更新（LIVE / SYNC / DEMO）
+        function setSyncStatus(mode) {
+            const badge = document.getElementById('data-source-badge');
+            const dot = document.getElementById('live-dot');
+            if (mode === 'live') {
+                badge.textContent = 'LIVE';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]';
+            } else if (mode === 'sync') {
+                badge.textContent = 'SYNC...';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse shadow-[0_0_10px_#fcd34d]';
+            } else {
+                badge.textContent = 'DEMO';
+                dot.className = 'w-2 h-2 rounded-full bg-white/60 shadow-[0_0_8px_#fff]';
+            }
+        }
+
+        // 都市切り替え（リアルタイム気象API連携＋フォールバック）
+        async function selectCity(cityKey) {
+            if (!CITIES[cityKey] && cityKey !== 'gps') return;
+            currentCityKey = cityKey;
+
+            // ナビゲーションボタンのアクティブ表示
+            updateCityButtons(cityKey);
+
+            // まずはキャッシュかデモデータを即座に描画して体感速度を上げる
+            const initialData = liveCache[cityKey] || CITIES[cityKey];
+            if (initialData) {
+                applyCityData(initialData);
+            }
+
+            // キャッシュがあればそれを使用
+            if (liveCache[cityKey]) {
+                setSyncStatus('live');
+                return;
+            }
+
+            // Open-Meteo からリアルタイムデータを取得
+            const meta = CITY_COORDS[cityKey];
+            if (!meta) return;
+
+            setSyncStatus('sync');
+            try {
+                const liveData = await fetchLiveWeather(meta.lat, meta.lon, meta.name, meta.isTropical);
+                liveCache[cityKey] = liveData;
+                if (currentCityKey === cityKey) {
+                    applyCityData(liveData);
+                    setSyncStatus('live');
+                }
+            } catch (err) {
+                console.warn('Live weather fetch failed, using fallback:', err);
+                setSyncStatus('demo');
+                showToast('オフラインのためデモデータを表示中');
+            }
+        }
+
+        // GPSで現在地のリアルタイム天気を取得
+        function useCurrentLocation() {
+            if (!navigator.geolocation) {
+                showToast('この端末では位置情報が利用できません');
+                return;
+            }
+
+            currentCityKey = 'gps';
+            updateCityButtons('gps');
+            setSyncStatus('sync');
+            showToast('現在地を取得しています...');
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    try {
+                        // 逆ジオコーディングで地名を取得（失敗時は「現在地」を表示）
+                        let placeName = '現在地';
+                        try {
+                            const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
+                            if (geoRes.ok) {
+                                const geo = await geoRes.json();
+                                const pref = geo.principalSubdivision || '';
+                                const city = geo.city || geo.locality || '';
+                                if (pref || city) placeName = `${pref} ${city}`.trim();
+                            }
+                        } catch (_) {}
+
+                        const isTropical = lat < 28;
+                        const liveData = await fetchLiveWeather(lat, lon, placeName, isTropical);
+                        liveCache['gps'] = liveData;
+                        CITIES['gps'] = liveData;
+                        applyCityData(liveData);
+                        setSyncStatus('live');
+                        showToast(`${placeName}の最新天気を取得しました`);
+                    } catch (err) {
+                        console.error(err);
+                        setSyncStatus('demo');
+                        showToast('天気データの取得に失敗しました');
+                    }
+                },
+                (err) => {
+                    console.warn('Geolocation error:', err);
+                    showToast('位置情報の許可が必要です（津市を表示します）');
+                    selectCity('tsu');
+                },
+                { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+            );
+        }
+
+        // ナビゲーションボタンのハイライト更新
+        function updateCityButtons(activeKey) {
+            document.querySelectorAll('.city-btn').forEach(btn => {
+                const isActive = btn.dataset.city === activeKey;
+                const isGps = btn.dataset.city === 'gps';
+                const base = isGps ? 'city-btn inline-flex items-center gap-1' : 'city-btn';
+                btn.className = isActive
+                    ? `${base} px-3 sm:px-4 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-white/40 bg-white/15 text-white whitespace-nowrap cursor-pointer`
+                    : `${base} px-3 sm:px-4 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent text-white/55 hover:text-white hover:bg-white/5 whitespace-nowrap cursor-pointer`;
+            });
+        }
+
+        // 都市データをUI全体へ反映
+        function applyCityData(city) {
+            CITIES[currentCityKey] = city;
+            document.getElementById('city-title').textContent = city.name;
+            document.getElementById('coord-label').textContent = city.coords;
+            document.querySelectorAll('.hi-temp-val').forEach(el => el.textContent = `${city.high}°`);
+            document.querySelectorAll('.lo-temp-val').forEach(el => el.textContent = `${city.low}°`);
+            document.getElementById('metric-sunrise').textContent = city.sunrise;
+            document.getElementById('metric-sunset').textContent = city.sunset;
+            document.getElementById('metric-aqi').textContent = city.aqi;
+            document.getElementById('metric-aqi-mobile').textContent = `AQI ${city.aqi}`;
+            document.getElementById('editorial-note').textContent = city.note;
+
+            renderScrubberTicks(city.slots);
+            renderTempCurve(city.slots);
+            setTimeSlot(currentSlotIndex);
+        }
+
+        // Open-Meteo API から今日1日の気象データ＆空気質を取得してアプリ形式に変換
+        async function fetchLiveWeather(lat, lon, displayName, isTropical = false) {
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,uv_index&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&wind_speed_unit=ms&timezone=auto&forecast_days=1`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=us_aqi&timezone=auto`;
+
+            const [wRes, aRes] = await Promise.all([
+                fetch(weatherUrl),
+                fetch(aqiUrl).catch(() => null)
+            ]);
+
+            if (!wRes.ok) throw new Error(`HTTP ${wRes.status}`);
+            const wData = await wRes.json();
+
+            // AQI（取得失敗時は良好をデフォルト表示）
+            let aqiLabel = "24 // GOOD";
+            if (aRes && aRes.ok) {
+                try {
+                    const aData = await aRes.json();
+                    const val = Math.round(aData?.current?.us_aqi ?? 24);
+                    const grade = val <= 25 ? 'PURE' : val <= 50 ? 'GOOD' : val <= 100 ? 'FAIR' : 'HAZY';
+                    aqiLabel = `${val} // ${grade}`;
+                } catch (_) {}
+            }
+
+            // 8つの時間スロット（03, 06, 09, 12, 15, 18, 21, 23時）を抽出
+            const hourIndices = [3, 6, 9, 12, 15, 18, 21, 23];
+            const labels = ["03:00", "06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "24:00"];
+            const phases = ["DEEP NIGHT", "DAWN", "MORNING", "MIDDAY", "AFTERNOON", "DUSK", "EVENING", "MIDNIGHT"];
+
+            const h = wData.hourly;
+            const slots = hourIndices.map((hrIdx, idx) => {
+                const code = h.weather_code[hrIdx] ?? 0;
+                const mapped = mapWmoCode(code, idx, isTropical);
+                const deg = Math.round(h.wind_direction_10m[hrIdx] ?? 0);
+                return {
+                    time: labels[idx],
+                    phase: phases[idx],
+                    sky: mapped.sky,
+                    cond: mapped.cond,
+                    temp: Math.round(h.temperature_2m[hrIdx] ?? 15),
+                    feels: Math.round(h.apparent_temperature[hrIdx] ?? 15),
+                    precip: Math.round(h.precipitation_probability[hrIdx] ?? 0),
+                    wind: Number((h.wind_speed_10m[hrIdx] ?? 0).toFixed(1)),
+                    dir: degToJaDir(deg),
+                    deg: deg,
+                    hum: Math.round(h.relative_humidity_2m[hrIdx] ?? 50),
+                    uv: Math.round(h.uv_index[hrIdx] ?? 0),
+                    poetic: mapped.poetic,
+                    ja: mapped.ja
+                };
+            });
+
+            const high = Math.round(wData.daily.temperature_2m_max[0]);
+            const low = Math.round(wData.daily.temperature_2m_min[0]);
+            const sunrise = (wData.daily.sunrise[0] || "T06:30").split('T')[1].slice(0, 5);
+            const sunset = (wData.daily.sunset[0] || "T17:00").split('T')[1].slice(0, 5);
+            const coords = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+
+            return {
+                name: displayName,
+                coords,
+                high,
+                low,
+                sunrise,
+                sunset,
+                aqi: aqiLabel,
+                note: generateDailyNote(high, low, slots),
+                slots
+            };
+        }
+
+        // WMO気象コードをAETHERの空テーマ・詩的表現へ変換
+        function mapWmoCode(code, slotIdx, isTropical) {
+            const isNight = slotIdx === 0 || slotIdx >= 6;
+            const isDusk = slotIdx === 5;
+
+            // 雪（71-77, 85-86）
+            if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+                return {
+                    cond: 'snow',
+                    sky: isNight ? 'night' : isDusk ? 'rain-night' : 'cloudy-day',
+                    poetic: isNight ? 'Silent snowflakes drifting under night air' : 'Delicate snowfall veiling the horizon',
+                    ja: '雪の降る静かな空・暖かくしてお過ごしください'
+                };
+            }
+            // 雨・雷雨（51-67, 80-82, 95-99）
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) {
+                return {
+                    cond: 'rain',
+                    sky: isNight || isDusk ? 'rain-night' : 'rain-day',
+                    poetic: code >= 95 ? 'Electric atmosphere with passing showers' : 'Silver droplets tracing through soft mist',
+                    ja: code >= 95 ? '雷を伴う雨・急な天候変化に注意' : 'しっとりと降る雨・傘を携えて外出を'
+                };
+            }
+            // 曇り・霧（2, 3, 45, 48）
+            if (code === 2 || code === 3 || code === 45 || code === 48) {
+                return {
+                    cond: 'cloudy',
+                    sky: isNight ? 'twilight' : isDusk ? 'cloudy-dusk' : 'cloudy-day',
+                    poetic: code >= 45 ? 'Soft mist resting gently over the landscape' : 'Diffused light filtering through quiet clouds',
+                    ja: code >= 45 ? '霧が立ち込める幻想的な空気' : '柔らかな雲が広がる穏やかな空'
+                };
+            }
+            // 晴れ（0, 1）
+            const clearSkies = ['night', 'dawn', isTropical ? 'tropical' : 'morning', isTropical ? 'tropical' : 'midday', isTropical ? 'tropical' : 'afternoon', 'sunset', 'twilight', 'night'];
+            const poeticBySlot = [
+                'Deep stillness under clear starlight',
+                'Pale rose dawn touching the horizon',
+                'Crisp morning clarity in fresh air',
+                'Radiant sunlight across an open sky',
+                'Warm afternoon light drifting gently',
+                'Amber twilight melting into indigo',
+                'Velvet evening sky with crisp air',
+                'Tranquil midnight beneath the stars'
+            ];
+            const jaBySlot = [
+                '澄み切った星空・静かな深夜',
+                '清々しい夜明け・澄んだ朝の空気',
+                '心地よい朝晴れ・爽やかな陽気',
+                '気持ちよく澄み渡る青空',
+                '柔らかな午後の光・穏やかな陽気',
+                '茜色から藍色へ移ろう美しい夕暮れ',
+                'クリアな夜空・過ごしやすい夜',
+                '星が瞬く静かな夜空'
+            ];
+            return {
+                cond: 'clear',
+                sky: clearSkies[slotIdx] || 'midday',
+                poetic: poeticBySlot[slotIdx],
+                ja: jaBySlot[slotIdx]
+            };
+        }
+
+        // 風向（角度）を日本語の8方位へ変換
+        function degToJaDir(deg) {
+            const dirs = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
+            return dirs[Math.round(((deg % 360) / 45)) % 8];
+        }
+
+        // 今日の気温・天気からエディトリアル・ライフスタイルノートを自動生成
+        function generateDailyNote(high, low, slots) {
+            const hasRain = slots.some(s => s.cond === 'rain' || s.precip >= 50);
+            const hasSnow = slots.some(s => s.cond === 'snow');
+            const diff = high - low;
+
+            let outfit = '';
+            if (high >= 26) {
+                outfit = '日中は夏のような陽気。リネンシャツや通気性の良い軽やかな装いが映えます。';
+            } else if (high >= 20) {
+                outfit = '過ごしやすい穏やかな一日。薄手のシャツやカーディガンで軽快に出かけられます。';
+            } else if (high >= 14) {
+                outfit = '心地よい涼しさ。ライトコートやウールジャケットなど、羽織り物が活躍する陽気です。';
+            } else if (high >= 8) {
+                outfit = '凛とした冷え込みを感じます。暖かなコートにニットやストールを重ねるのがおすすめです。';
+            } else {
+                outfit = '本格的な冬の寒さ。ダウンコートやマフラーで首元までしっかりと防寒してお過ごしください。';
+            }
+
+            let extra = '';
+            if (hasSnow) {
+                extra = '雪が舞う時間帯があるため、足元の滑り対策もお忘れなく。';
+            } else if (hasRain) {
+                extra = '雨の予報が出ているため、折り畳み傘と撥水性のあるアウターがあると安心です。';
+            } else if (diff >= 9) {
+                extra = `朝晩と日中の寒暖差が${diff}℃と大きいため、脱ぎ着しやすいレイヤードスタイルが快適です。`;
+            } else {
+                extra = '大きな天気の崩れはなく、穏やかな光と空気を楽しめる一日になりそうです。';
+            }
+
+            return `${outfit}${extra}`;
+        }
+
+        // タイムラインの時刻ボタンを描画
+        function renderScrubberTicks(slots) {
+            const container = document.getElementById('scrubber-ticks');
+            container.innerHTML = slots.map((s, idx) => `
+                <button onclick="onTickClick(${idx})" class="tick-btn group flex flex-col items-center gap-0.5 py-1 rounded-lg sm:rounded-xl transition cursor-pointer" data-idx="${idx}">
+                    <span class="font-mono text-[9px] sm:text-xs transition-colors">${s.time.slice(0, 2)}h</span>
+                    <span class="font-serif text-xs sm:text-base transition-colors">${s.temp}°</span>
+                </button>
+            `).join('');
+        }
+
+        function onTickClick(idx) {
+            stopAutoPlay();
+            setTimeSlot(idx);
+        }
+
+        // 時間スロットの変更と全UIの同期更新
+        function setTimeSlot(index) {
+            currentSlotIndex = index;
+            const city = CITIES[currentCityKey];
+            const slot = city.slots[index];
+            if (!slot) return;
+
+            // スライダー同期
+            document.getElementById('time-scrubber').value = index;
+
+            // テキスト情報更新
+            document.getElementById('time-phase-badge').textContent = slot.phase;
+            document.getElementById('active-clock').textContent = `${slot.time} JST`;
+            document.getElementById('weather-poetic').textContent = slot.poetic;
+            document.getElementById('weather-ja').textContent = slot.ja;
+            document.getElementById('main-temp').textContent = slot.temp;
+            document.querySelectorAll('.feels-temp-val').forEach(el => el.textContent = `${slot.feels}°C`);
+            document.querySelectorAll('.precip-val').forEach(el => el.textContent = `${slot.precip}%`);
+            document.getElementById('sky-state-code').textContent = slot.cond.toUpperCase();
+
+            // メトリクス更新
+            document.getElementById('metric-wind').textContent = slot.wind.toFixed(1);
+            document.getElementById('metric-wind-dir').textContent = `${slot.dir}の風`;
+            document.getElementById('compass-needle').style.transform = `rotate(${slot.deg}deg)`;
+
+            document.getElementById('metric-humidity').textContent = slot.hum;
+            const activeSegs = Math.round(slot.hum / 10);
+            const segs = document.getElementById('humidity-segments').children;
+            for (let i = 0; i < segs.length; i++) {
+                segs[i].style.backgroundColor = i < activeSegs ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.12)';
+            }
+            const dew = Math.round(slot.temp - ((100 - slot.hum) / 5));
+            const comfort = slot.hum > 75 ? 'しっとり湿潤' : slot.hum < 45 ? 'やや乾燥' : '快適なバランス';
+            document.getElementById('metric-dew').textContent = `露点 ${dew}°C ・ ${comfort}`;
+
+            // UV指数
+            document.getElementById('metric-uv').textContent = slot.uv;
+            const uvLabel = slot.uv === 0 ? 'なし' : slot.uv <= 2 ? '弱い' : slot.uv <= 5 ? '中程度' : '強い';
+            const uvNote = slot.uv === 0 ? '紫外線対策は不要です' : slot.uv <= 2 ? '穏やかな紫外線量です' : slot.uv <= 5 ? '日中は軽い対策を推奨' : 'サングラスや日焼け止め推奨';
+            document.getElementById('metric-uv-label').textContent = uvLabel;
+            document.getElementById('metric-uv-note').textContent = uvNote;
+            document.getElementById('uv-indicator').style.left = `${Math.min(slot.uv * 11, 95)}%`;
+
+            // 太陽軌道アークの進行度（06:00=index1 〜 18:00=index5 を日中として滑らかに移動）
+            updateSolarArc(index);
+
+            // 空のカラーパレットと天体アート更新
+            applySkyPalette(slot.sky, slot.cond);
+
+            // タイムラインティックのハイライト更新
+            document.querySelectorAll('.tick-btn').forEach(btn => {
+                const isSel = parseInt(btn.dataset.idx, 10) === index;
+                btn.className = isSel
+                    ? 'tick-btn group flex flex-col items-center gap-0.5 py-1 rounded-lg sm:rounded-xl bg-white/15 border border-white/25 text-white transition cursor-pointer'
+                    : 'tick-btn group flex flex-col items-center gap-0.5 py-1 rounded-lg sm:rounded-xl border border-transparent text-white/45 hover:text-white/80 hover:bg-white/5 transition cursor-pointer';
+            });
+
+            // SVG曲線のアクティブノード位置を更新
+            updateActiveCurveNode(city.slots, index);
+        }
+
+        // 空のテーマと天体スカルプチャーの見た目を適用
+        function applySkyPalette(skyKey, condition) {
+            currentSky = skyKey;
+            currentCondition = condition;
+            const palette = SKY_PALETTES[skyKey] || SKY_PALETTES.midday;
+            const root = document.documentElement;
+
+            root.style.setProperty('--bg-top', palette.top);
+            root.style.setProperty('--bg-mid', palette.mid);
+            root.style.setProperty('--bg-bot', palette.bot);
+            root.style.setProperty('--orb-core', palette.core);
+            root.style.setProperty('--orb-glow', palette.glow);
+
+            // 曇り・雨・雪の時はガラスベールを前面に出す
+            const veil = document.getElementById('celestial-veil');
+            if (condition === 'cloudy' || condition === 'rain' || condition === 'snow') {
+                veil.classList.add('active');
+            } else {
+                veil.classList.remove('active');
+            }
+        }
+
+        // 太陽軌道アークのドット位置を計算
+        function updateSolarArc(slotIdx) {
+            let t = (slotIdx - 1) / 4;
+            const isDay = t >= 0 && t <= 1;
+            t = Math.max(0, Math.min(1, t));
+
+            // 2次ベジェ曲線 P0(14,46), P1(80,-8), P2(146,46)
+            const x = Math.pow(1 - t, 2) * 14 + 2 * (1 - t) * t * 80 + Math.pow(t, 2) * 146;
+            const y = Math.pow(1 - t, 2) * 46 + 2 * (1 - t) * t * (-8) + Math.pow(t, 2) * 46;
+
+            const dot = document.getElementById('solar-dot');
+            const glow = document.getElementById('solar-dot-glow');
+            const arc = document.getElementById('solar-progress-arc');
+
+            dot.setAttribute('cx', x);
+            dot.setAttribute('cy', y);
+            glow.setAttribute('cx', x);
+            glow.setAttribute('cy', y);
+
+            dot.style.opacity = isDay ? '1' : '0.35';
+            glow.style.opacity = isDay ? '1' : '0';
+            arc.style.strokeDashoffset = 165 * (1 - t);
+        }
+
+        // カスタムSVGの滑らかなベジェ温度曲線を生成
+        function getCurvePoints(slots) {
+            const temps = slots.map(s => s.temp);
+            const minT = Math.min(...temps) - 2;
+            const maxT = Math.max(...temps) + 2;
+            const range = Math.max(maxT - minT, 1);
+
+            const width = 800;
+            const topPad = 24;
+            const botPad = 128;
+
+            return slots.map((s, i) => {
+                const x = (width / (slots.length - 1)) * i;
+                const y = botPad - ((s.temp - minT) / range) * (botPad - topPad);
+                return { x, y };
+            });
+        }
+
+        function renderTempCurve(slots) {
+            const pts = getCurvePoints(slots);
+            let d = `M ${pts[0].x} ${pts[0].y}`;
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p0 = pts[Math.max(i - 1, 0)];
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const p3 = pts[Math.min(i + 2, pts.length - 1)];
+
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = p1.y + (p2.y - p0.y) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+                d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+            }
+
+            const areaD = `${d} L 800 155 L 0 155 Z`;
+            document.getElementById('curve-line').setAttribute('d', d);
+            document.getElementById('curve-area').setAttribute('d', areaD);
+        }
+
+        function updateActiveCurveNode(slots, index) {
+            const pts = getCurvePoints(slots);
+            const pt = pts[index];
+            if (!pt) return;
+
+            document.getElementById('active-vline').setAttribute('x1', pt.x);
+            document.getElementById('active-vline').setAttribute('x2', pt.x);
+            document.getElementById('active-node').setAttribute('cx', pt.x);
+            document.getElementById('active-node').setAttribute('cy', pt.y);
+            document.getElementById('active-node-glow').setAttribute('cx', pt.x);
+            document.getElementById('active-node-glow').setAttribute('cy', pt.y);
+        }
+
+        // 1日の移ろい自動再生機能
+        function setAutoPlayIcon(iconName) {
+            const wrap = document.getElementById('autoplay-icon-wrap');
+            if (!wrap) return;
+            wrap.innerHTML = `<i data-lucide="${iconName}" class="w-3 h-3"></i>`;
+            safeCreateIcons();
+        }
+
+        function toggleAutoPlay() {
+            if (autoPlayTimer) {
+                stopAutoPlay();
+            } else {
+                document.getElementById('autoplay-text').textContent = 'Pause';
+                setAutoPlayIcon('pause');
+
+                autoPlayTimer = setInterval(() => {
+                    const nextIdx = (currentSlotIndex + 1) % 8;
+                    setTimeSlot(nextIdx);
+                }, 1400);
+            }
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                document.getElementById('autoplay-text').textContent = 'Play Day';
+                setAutoPlayIcon('play');
+            }
+        }
+
+        // 天体スカルプチャーの微細なマウスパララックス効果
+        function initParallax() {
+            const wrap = document.getElementById('celestial-wrap');
+            window.addEventListener('mousemove', (e) => {
+                if (window.innerWidth < 768) return;
+                const x = (e.clientX / window.innerWidth - 0.5) * 22;
+                const y = (e.clientY / window.innerHeight - 0.5) * 22;
+                wrap.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+            });
+        }
+
+        // 背景の高度な大気パーティクル・シミュレーション（雨・雪・星空・光の粒子）
+        function initAtmosphereCanvas() {
+            const canvas = document.getElementById('atmosphere-canvas');
+            const ctx = canvas.getContext('2d');
+            let w, h;
+            const particles = [];
+            const COUNT = 95;
+
+            function resize() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            for (let i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 1.8 + 0.4,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: Math.random() * 1.2 + 0.4,
+                    alpha: Math.random() * 0.65 + 0.15,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, w, h);
+                const now = Date.now() * 0.002;
+                const isNight = currentSky === 'night' || currentSky === 'twilight' || currentSky === 'rain-night';
+
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+
+                    if (currentCondition === 'rain') {
+                        // 繊細な斜めの雨筋
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(186, 230, 253, ${p.alpha * 0.55})`;
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x - 3, p.y + 18);
+                        ctx.stroke();
+
+                        p.y += p.vy * 11;
+                        p.x -= 1.8;
+                    } else if (currentCondition === 'snow') {
+                        // 舞い落ちる粉雪
+                        ctx.beginPath();
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha * 0.85})`;
+                        ctx.arc(p.x, p.y, p.r * 1.35, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        p.y += p.vy * 1.4;
+                        p.x += Math.sin(now + p.phase) * 0.8 - 0.4;
+                    } else if (isNight) {
+                        // 瞬く星々
+                        const twinkle = Math.sin(now * 1.5 + p.phase) * 0.4 + 0.6;
+                        ctx.beginPath();
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha * twinkle})`;
+                        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        p.y -= p.vy * 0.06;
+                    } else {
+                        // 昼・夕暮れの浮遊する大気の光粒子
+                        const glow = Math.sin(now + p.phase) * 0.3 + 0.7;
+                        ctx.beginPath();
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha * 0.35 * glow})`;
+                        ctx.arc(p.x, p.y, p.r * 1.4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        p.y -= p.vy * 0.28;
+                        p.x += Math.cos(now * 0.6 + p.phase) * 0.3;
+                    }
+
+                    // 画面端のループ処理
+                    if (p.y > h + 20) { p.y = -20; p.x = Math.random() * w; }
+                    if (p.y < -20) { p.y = h + 20; p.x = Math.random() * w; }
+                    if (p.x > w + 20) { p.x = -20; p.y = Math.random() * h; }
+                    if (p.x < -20) { p.x = w + 20; p.y = Math.random() * h; }
+                }
+
+                requestAnimationFrame(render);
+            }
+
+            render();
+        }
+    </script>
+</body>
+</html>
