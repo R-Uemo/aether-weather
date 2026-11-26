@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AETHER">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#090d16">
+    <meta id="meta-theme-color" name="theme-color" content="#090d16">
     <!-- 専用アプリアイコン（URLエンコードSVG） -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23090d16'/%3E%3Cstop offset='100%25' stop-color='%231b4d89'/%3E%3C/linearGradient%3E%3CradialGradient id='orb' cx='35%25' cy='35%25' r='65%25'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='55%25' stop-color='%23fef08a'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b' stop-opacity='0.2'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='116' fill='url(%23bg)'/%3E%3Ccircle cx='256' cy='256' r='165' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='4'/%3E%3Ccircle cx='256' cy='91' r='9' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='256' r='110' fill='url(%23orb)'/%3E%3C/svg%3E">
     <link id="apple-touch-icon" rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23090d16'/%3E%3Cstop offset='100%25' stop-color='%231b4d89'/%3E%3C/linearGradient%3E%3CradialGradient id='orb' cx='35%25' cy='35%25' r='65%25'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='55%25' stop-color='%23fef08a'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b' stop-opacity='0.2'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23bg)'/%3E%3Ccircle cx='256' cy='256' r='165' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='4'/%3E%3Ccircle cx='256' cy='91' r='9' fill='%23ffffff'/%3E%3Ccircle cx='256' cy='256' r='110' fill='url(%23orb)'/%3E%3C/svg%3E">
@@ -111,6 +111,11 @@
             background: rgba(255, 255, 255, 0.055);
         }
 
+        /* 明るい空テーマでも文字の可読性を保つ微細なシャドウ */
+        .legible-shadow {
+            text-shadow: 0 1px 12px rgba(0, 0, 0, 0.25);
+        }
+
         /* 彫刻的な天体オーブ（太陽・月・雨雲の抽象アート） */
         .celestial-sculpture {
             position: relative;
@@ -189,22 +194,45 @@
             to { transform: rotate(0deg); }
         }
 
-        /* カスタムレンジスライダー（タイムスクラバー） */
+        /* 動きに敏感なユーザーへのアクセシビリティ配慮 */
+        @media (prefers-reduced-motion: reduce) {
+            .celestial-ring, .celestial-ring-outer {
+                animation: none !important;
+            }
+        }
+
+        /* カスタムレンジスライダー（モバイル向けにタップ領域32pxを確保しつつ見た目は極細2px） */
         input[type="range"].time-scrubber {
             -webkit-appearance: none;
             appearance: none;
             width: 100%;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.18);
+            height: 32px;
+            background: transparent;
             outline: none;
             cursor: pointer;
+            margin: -10px 0;
+        }
+
+        input[type="range"].time-scrubber::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 9999px;
+        }
+
+        input[type="range"].time-scrubber::-moz-range-track {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 9999px;
         }
 
         input[type="range"].time-scrubber::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
+            margin-top: -9px;
             border-radius: 50%;
             background: #ffffff;
             border: 3px solid rgba(15, 23, 42, 0.9);
@@ -214,12 +242,12 @@
         }
 
         input[type="range"].time-scrubber::-webkit-slider-thumb:hover {
-            transform: scale(1.25);
+            transform: scale(1.2);
         }
 
         input[type="range"].time-scrubber::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: #ffffff;
             border: 3px solid rgba(15, 23, 42, 0.9);
@@ -263,14 +291,14 @@
         <header class="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-3 border-b border-white/15">
             <div class="flex items-center justify-between md:justify-start gap-4">
                 <div class="flex items-center gap-2.5">
-                    <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"></span>
-                    <h1 class="font-display font-bold tracking-[0.26em] text-xs sm:text-sm uppercase">Aether</h1>
-                    <span id="data-source-badge" class="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded-full border border-white/20 text-white/75 uppercase">SYNC...</span>
-                </div>
-                <div class="flex items-center gap-2 font-mono text-[10px] sm:text-[11px] tracking-widest text-white/55 uppercase">
+                <div class="flex items-center gap-2 font-mono text-[10px] sm:text-[11px] tracking-widest text-white/65 uppercase">
                     <span id="today-date-label">----.--.--</span>
                     <span class="hidden sm:inline text-white/25">/</span>
                     <span id="coord-label" class="hidden sm:inline">34.7186° N, 136.5057° E</span>
+                    <!-- PWA全画面時でも最新データへ再取得できるリフレッシュボタン -->
+                    <button id="refresh-btn" onclick="refreshWeather()" aria-label="最新の天気を取得" title="最新の天気を取得" class="ml-1 p-1.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/15 text-white/80 hover:text-white transition cursor-pointer">
+                        <i id="refresh-icon" data-lucide="refresh-cw" class="w-3 h-3"></i>
+                    </button>
                 </div>
             </div>
 
@@ -311,7 +339,7 @@
         </section>
 
         <!-- ヒーローセクション：モバイルでも1画面に収まるコンパクトな2カラム構成 -->
-        <section class="grid grid-cols-12 gap-3 sm:gap-6 items-center py-1 sm:py-2">
+        <section class="grid grid-cols-12 gap-3 sm:gap-6 items-center py-1 sm:py-2 legible-shadow">
 
             <!-- 左側：ロケーション＆大型セリフ気温表示 -->
             <div class="col-span-7 sm:col-span-7 flex flex-col justify-between gap-2.5 sm:gap-4">
@@ -395,8 +423,8 @@
                 </button>
             </div>
 
-            <!-- カスタムSVG 温度カーブ -->
-            <div class="relative w-full h-24 sm:h-36 select-none">
+            <!-- カスタムSVG 温度カーブ（クリック／タップで時間帯を直接選択可能） -->
+            <div id="curve-container" class="relative w-full h-24 sm:h-36 select-none cursor-pointer" title="グラフをタップして時間帯を選択">
                 <svg id="curve-svg" viewBox="0 0 800 160" preserveAspectRatio="none" class="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id="curveAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -457,7 +485,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="font-mono text-[9px] text-white/45 tracking-wider uppercase">Breeze // Steady</div>
+                <div id="metric-wind-scale" class="font-mono text-[9px] text-white/55 tracking-wider uppercase">Breeze // Steady</div>
             </div>
 
             <!-- 2. 湿度・大気バランス -->
@@ -569,7 +597,7 @@
                     { time: "15:00", phase: "AFTERNOON", sky: "afternoon", cond: "clear", temp: 18, feels: 17, precip: 10, wind: 3.5, dir: "西", deg: 280, hum: 45, uv: 3, poetic: "Warm golden hour approaching", ja: "柔らかな午後の光・絶好の外出日和" },
                     { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 14, feels: 12, precip: 10, wind: 3.0, dir: "北西", deg: 305, hum: 55, uv: 0, poetic: "Amber twilight melting into indigo", ja: "茜色から藍色へ移ろう夕暮れ" },
                     { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 11, feels: 9, precip: 5, wind: 2.5, dir: "北西", deg: 315, hum: 60, uv: 0, poetic: "Velvet night sky with crisp air", ja: "澄み切った夜空・冷え込みに注意" },
-                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 10, feels: 8, precip: 5, wind: 2.0, dir: "北", deg: 350, hum: 65, uv: 0, poetic: "Deep stillness under starlight", ja: "静かな星月夜・穏やかな深夜" }
+                    { time: "23:00", phase: "LATE NIGHT", sky: "night", cond: "clear", temp: 10, feels: 8, precip: 5, wind: 2.0, dir: "北", deg: 350, hum: 65, uv: 0, poetic: "Deep stillness under starlight", ja: "静かな星月夜・穏やかな深夜" }
                 ]
             },
             tokyo: {
@@ -589,7 +617,7 @@
                     { time: "15:00", phase: "AFTERNOON", sky: "afternoon", cond: "cloudy", temp: 19, feels: 18, precip: 15, wind: 2.9, dir: "東", deg: 85, hum: 46, uv: 2, poetic: "Delicate clouds drifting in warm light", ja: "薄雲が広がる穏やかな午後" },
                     { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 15, feels: 14, precip: 10, wind: 2.6, dir: "東", deg: 95, hum: 52, uv: 0, poetic: "Crimson horizon behind glass towers", ja: "ドラマチックな黄金色の夕暮れ" },
                     { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 13, feels: 11, precip: 10, wind: 2.1, dir: "北東", deg: 50, hum: 56, uv: 0, poetic: "Clear indigo evening in the metropolis", ja: "クリアな夜空・過ごしやすい夜" },
-                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 11, feels: 10, precip: 10, wind: 1.9, dir: "北", deg: 15, hum: 59, uv: 0, poetic: "Tranquil midnight glow", ja: "穏やかな深夜・冷え込みは緩やか" }
+                    { time: "23:00", phase: "LATE NIGHT", sky: "night", cond: "clear", temp: 11, feels: 10, precip: 10, wind: 1.9, dir: "北", deg: 15, hum: 59, uv: 0, poetic: "Tranquil midnight glow", ja: "穏やかな深夜・冷え込みは緩やか" }
                 ]
             },
             kyoto: {
@@ -609,7 +637,7 @@
                     { time: "15:00", phase: "AFTERNOON", sky: "rain-day", cond: "rain", temp: 15, feels: 13, precip: 75, wind: 2.0, dir: "北", deg: 0, hum: 85, uv: 1, poetic: "Soft drizzle tapering off", ja: "小雨交じり・次第に雨足は弱まる" },
                     { time: "18:00", phase: "DUSK", sky: "cloudy-dusk", cond: "cloudy", temp: 12, feels: 10, precip: 35, wind: 1.6, dir: "北", deg: 15, hum: 80, uv: 0, poetic: "Clearing mist after the rain", ja: "雨上がりの霞んだ夕暮れ" },
                     { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 10, feels: 8, precip: 15, wind: 1.4, dir: "北", deg: 5, hum: 76, uv: 0, poetic: "Washed air revealing crisp stars", ja: "雨上がりの澄み切った夜空" },
-                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 8, feels: 6, precip: 10, wind: 1.2, dir: "北", deg: 0, hum: 78, uv: 0, poetic: "Cool serenity in the valley", ja: "底冷えのする静かな深夜" }
+                    { time: "23:00", phase: "LATE NIGHT", sky: "night", cond: "clear", temp: 8, feels: 6, precip: 10, wind: 1.2, dir: "北", deg: 0, hum: 78, uv: 0, poetic: "Cool serenity in the valley", ja: "底冷えのする静かな深夜" }
                 ]
             },
             sapporo: {
@@ -629,7 +657,7 @@
                     { time: "15:00", phase: "AFTERNOON", sky: "cloudy-day", cond: "snow", temp: 4, feels: 0, precip: 55, wind: 5.0, dir: "北西", deg: 320, hum: 72, uv: 0, poetic: "Delicate snowflakes drifting on the wind", ja: "ちらつく雪・急速に気温が低下" },
                     { time: "18:00", phase: "DUSK", sky: "rain-night", cond: "snow", temp: 1, feels: -3, precip: 60, wind: 4.6, dir: "北西", deg: 325, hum: 76, uv: 0, poetic: "Blue hour veiled in quiet snow", ja: "雪の舞う幻想的な薄暮" },
                     { time: "21:00", phase: "EVENING", sky: "night", cond: "snow", temp: -1, feels: -5, precip: 50, wind: 4.1, dir: "北西", deg: 330, hum: 78, uv: 0, poetic: "Diamond dust shimmering in night air", ja: "氷点下の雪夜・路面凍結に注意" },
-                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: -2, feels: -6, precip: 20, wind: 3.5, dir: "北", deg: 350, hum: 75, uv: 0, poetic: "Crystalline arctic stillness", ja: "雲が切れ、凍てつく星空へ" }
+                    { time: "23:00", phase: "LATE NIGHT", sky: "night", cond: "clear", temp: -2, feels: -6, precip: 20, wind: 3.5, dir: "北", deg: 350, hum: 75, uv: 0, poetic: "Crystalline arctic stillness", ja: "雲が切れ、凍てつく星空へ" }
                 ]
             },
             okinawa: {
@@ -649,7 +677,7 @@
                     { time: "15:00", phase: "AFTERNOON", sky: "tropical", cond: "clear", temp: 26, feels: 26, precip: 10, wind: 4.3, dir: "東南東", deg: 110, hum: 58, uv: 6, poetic: "Luminous afternoon warmth", ja: "光あふれる午後・海辺の散策に最適" },
                     { time: "18:00", phase: "DUSK", sky: "sunset", cond: "clear", temp: 23, feels: 23, precip: 10, wind: 3.8, dir: "東", deg: 95, hum: 65, uv: 0, poetic: "Fiery gold sunset over emerald waters", ja: "水平線を染める壮麗なサンセット" },
                     { time: "21:00", phase: "EVENING", sky: "twilight", cond: "clear", temp: 21, feels: 21, precip: 5, wind: 3.5, dir: "東", deg: 90, hum: 68, uv: 0, poetic: "Balmy island night", ja: "半袖でも心地よい穏やかな夜" },
-                    { time: "24:00", phase: "MIDNIGHT", sky: "night", cond: "clear", temp: 20, feels: 20, precip: 5, wind: 3.2, dir: "東", deg: 85, hum: 70, uv: 0, poetic: "Endless rhythm of night waves", ja: "星が瞬く静かな南国の深夜" }
+                    { time: "23:00", phase: "LATE NIGHT", sky: "night", cond: "clear", temp: 20, feels: 20, precip: 5, wind: 3.2, dir: "東", deg: 85, hum: 70, uv: 0, poetic: "Endless rhythm of night waves", ja: "星が瞬く静かな南国の深夜" }
                 ]
             }
         };
@@ -713,6 +741,7 @@
         let currentSky = 'midday';
         let autoPlayTimer = null;
         let toastTimer = null;
+        let activeRequestId = 0; // 非同期通信のレースコンディション防止用ID
         const liveCache = {}; // 取得済みリアルタイムデータのキャッシュ
 
         // Lucideアイコンを安全に初期化
@@ -725,10 +754,12 @@
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
             safeCreateIcons();
+            generateIosTouchIconPng();
             registerDynamicManifest();
             updateTodayDateLabel();
             currentSlotIndex = getNearestSlotIndex();
             initHumiditySegments();
+            initCurveInteraction();
             initAtmosphereCanvas();
             initParallax();
 
@@ -741,56 +772,66 @@
             selectCity('tsu');
         });
 
-        // 湿度セグメント（10個）を初期化
-        function initHumiditySegments() {
-            const container = document.getElementById('humidity-segments');
-            if (!container) return;
-            container.innerHTML = '';
-            for (let i = 0; i < 10; i++) {
-                const seg = document.createElement('div');
-                seg.className = 'h-1.5 rounded-full bg-white/15 transition-colors duration-500';
-                container.appendChild(seg);
-            }
-        }
-
-        // 単一ファイルでもAndroid等でフルスクリーンPWAとして認識させるための動的Manifest登録
-        function registerDynamicManifest() {
+        // iOS Safari向けにCanvasからPNG形式のホーム画面アイコンを動的生成
+        function generateIosTouchIconPng() {
             try {
-                const iconEl = document.querySelector('link[rel="icon"]');
-                if (!iconEl) return;
-                const manifest = {
-                    name: "AETHER Weather",
-                    short_name: "AETHER",
-                    start_url: ".",
-                    display: "standalone",
-                    background_color: "#090d16",
-                    theme_color: "#090d16",
-                    icons: [{ src: iconEl.href, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }]
-                };
-                const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-                const manifestLink = document.createElement('link');
-                manifestLink.rel = 'manifest';
-                manifestLink.href = URL.createObjectURL(blob);
-                document.head.appendChild(manifestLink);
+                const c = document.createElement('canvas');
+                c.width = 180;
+                c.height = 180;
+                const ctx = c.getContext('2d');
+                if (!ctx) return;
+
+                const bg = ctx.createLinearGradient(0, 0, 180, 180);
+                bg.addColorStop(0, '#090d16');
+                bg.addColorStop(1, '#1b4d89');
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, 180, 180);
+
+                ctx.beginPath();
+                ctx.arc(90, 90, 58, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(90, 32, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+                const orb = ctx.createRadialGradient(78, 76, 4, 90, 90, 42);
+                orb.addColorStop(0, '#ffffff');
+                orb.addColorStop(0.55, '#fef08a');
+                orb.addColorStop(1, 'rgba(245, 158, 11, 0.15)');
+                ctx.beginPath();
+                ctx.arc(90, 90, 40, 0, Math.PI * 2);
+                ctx.fillStyle = orb;
+                ctx.fill();
+
+                const link = document.getElementById('apple-touch-icon');
+                if (link) link.href = c.toDataURL('image/png');
             } catch (e) {
-                console.warn('Manifest registration skipped:', e);
+                console.warn('iOS icon generation skipped:', e);
             }
         }
 
-        // 今日の日付をヘッダーに表示
-        function updateTodayDateLabel() {
-            const now = new Date();
-            const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            document.getElementById('today-date-label').textContent = `${y}.${m}.${d} ${days[now.getDay()]}`;
+        // 温度曲線エリアのクリック／タップで最寄りの時間帯へ移動
+        function initCurveInteraction() {
+            const container = document.getElementById('curve-container');
+            if (!container) return;
+            container.addEventListener('click', (e) => {
+                const rect = container.getBoundingClientRect();
+                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const idx = Math.round(ratio * 7);
+                onTickClick(idx);
+            });
         }
 
-        // 現在時刻に最も近い3時間スロット（03,06,09,12,15,18,21,24時）のインデックスを返す
+        // 都市データをUI全体へ反映
+        function applyCityData(city) {
+        // 現在時刻に最も近い3時間スロット（03,06,09,12,15,18,21,23時）のインデックスを返す
         function getNearestSlotIndex() {
             const hour = new Date().getHours();
-            const targetHours = [3, 6, 9, 12, 15, 18, 21, 24];
+            const targetHours = [3, 6, 9, 12, 15, 18, 21, 23];
             let bestIdx = 3;
             let minDiff = 99;
             targetHours.forEach((th, idx) => {
@@ -802,52 +843,40 @@
             });
             return bestIdx;
         }
+        // 手動リフレッシュ（PWA全画面起動時でも最新天気・日付を再取得可能）
+        async function refreshWeather() {
+            const btn = document.getElementById('refresh-btn');
+            if (btn) btn.classList.add('animate-spin');
+            updateTodayDateLabel();
+            currentSlotIndex = getNearestSlotIndex();
 
-        // トースト通知表示
-        function showToast(message) {
-            const box = document.getElementById('toast-box');
-            document.getElementById('toast-msg').textContent = message;
-            box.classList.remove('opacity-0', 'translate-y-3');
-            box.classList.add('opacity-100', 'translate-y-0');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                box.classList.add('opacity-0', 'translate-y-3');
-                box.classList.remove('opacity-100', 'translate-y-0');
-            }, 3200);
-        }
-
-        // ステータスバッジの更新（LIVE / SYNC / DEMO）
-        function setSyncStatus(mode) {
-            const badge = document.getElementById('data-source-badge');
-            const dot = document.getElementById('live-dot');
-            if (mode === 'live') {
-                badge.textContent = 'LIVE';
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]';
-            } else if (mode === 'sync') {
-                badge.textContent = 'SYNC...';
-                dot.className = 'w-2 h-2 rounded-full bg-amber-300 animate-pulse shadow-[0_0_10px_#fcd34d]';
+            delete liveCache[currentCityKey];
+            if (currentCityKey === 'gps') {
+                useCurrentLocation(true);
             } else {
-                badge.textContent = 'DEMO';
-                dot.className = 'w-2 h-2 rounded-full bg-white/60 shadow-[0_0_8px_#fff]';
+                await selectCity(currentCityKey, true);
+                showToast('最新の天気データに更新しました');
             }
+            if (btn) setTimeout(() => btn.classList.remove('animate-spin'), 450);
         }
 
         // 都市切り替え（リアルタイム気象API連携＋フォールバック）
-        async function selectCity(cityKey) {
+        async function selectCity(cityKey, forceRefresh = false) {
             if (!CITIES[cityKey] && cityKey !== 'gps') return;
             currentCityKey = cityKey;
+            const reqId = ++activeRequestId;
 
             // ナビゲーションボタンのアクティブ表示
             updateCityButtons(cityKey);
 
             // まずはキャッシュかデモデータを即座に描画して体感速度を上げる
-            const initialData = liveCache[cityKey] || CITIES[cityKey];
+            const initialData = (!forceRefresh && liveCache[cityKey]) ? liveCache[cityKey] : CITIES[cityKey];
             if (initialData) {
                 applyCityData(initialData);
             }
 
-            // キャッシュがあればそれを使用
-            if (liveCache[cityKey]) {
+            // キャッシュがあり強制更新でなければ終了
+            if (!forceRefresh && liveCache[cityKey]) {
                 setSyncStatus('live');
                 return;
             }
@@ -860,35 +889,39 @@
             try {
                 const liveData = await fetchLiveWeather(meta.lat, meta.lon, meta.name, meta.isTropical);
                 liveCache[cityKey] = liveData;
-                if (currentCityKey === cityKey) {
+                // レースコンディション対策：最新のリクエストのみ反映
+                if (reqId === activeRequestId && currentCityKey === cityKey) {
                     applyCityData(liveData);
                     setSyncStatus('live');
                 }
             } catch (err) {
                 console.warn('Live weather fetch failed, using fallback:', err);
-                setSyncStatus('demo');
-                showToast('オフラインのためデモデータを表示中');
+                if (reqId === activeRequestId) {
+                    setSyncStatus('demo');
+                    showToast('オフラインのためデモデータを表示中');
+                }
             }
         }
 
         // GPSで現在地のリアルタイム天気を取得
-        function useCurrentLocation() {
+        function useCurrentLocation(isRefresh = false) {
             if (!navigator.geolocation) {
                 showToast('この端末では位置情報が利用できません');
                 return;
             }
 
             currentCityKey = 'gps';
+            const reqId = ++activeRequestId;
             updateCityButtons('gps');
             setSyncStatus('sync');
-            showToast('現在地を取得しています...');
+            showToast(isRefresh ? '現在地の最新天気を更新中...' : '現在地を取得しています...');
 
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
+                    if (reqId !== activeRequestId) return;
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
                     try {
-                        // 逆ジオコーディングで地名を取得（失敗時は「現在地」を表示）
                         let placeName = '現在地';
                         try {
                             const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
@@ -902,6 +935,8 @@
 
                         const isTropical = lat < 28;
                         const liveData = await fetchLiveWeather(lat, lon, placeName, isTropical);
+                        if (reqId !== activeRequestId) return;
+
                         liveCache['gps'] = liveData;
                         CITIES['gps'] = liveData;
                         applyCityData(liveData);
@@ -909,105 +944,57 @@
                         showToast(`${placeName}の最新天気を取得しました`);
                     } catch (err) {
                         console.error(err);
-                        setSyncStatus('demo');
-                        showToast('天気データの取得に失敗しました');
+                        if (reqId === activeRequestId) {
+                            setSyncStatus('demo');
+                            showToast('天気データの取得に失敗しました');
+                        }
                     }
                 },
                 (err) => {
                     console.warn('Geolocation error:', err);
-                    showToast('位置情報の許可が必要です（津市を表示します）');
-                    selectCity('tsu');
+                    if (reqId === activeRequestId) {
+                        showToast('位置情報の許可が必要です（津市を表示します）');
+                        selectCity('tsu');
+                    }
                 },
                 { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
             );
         }
 
-        // ナビゲーションボタンのハイライト更新
-        function updateCityButtons(activeKey) {
-            document.querySelectorAll('.city-btn').forEach(btn => {
-                const isActive = btn.dataset.city === activeKey;
-                const isGps = btn.dataset.city === 'gps';
-                const base = isGps ? 'city-btn inline-flex items-center gap-1' : 'city-btn';
-                btn.className = isActive
-                    ? `${base} px-3 sm:px-4 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-white/40 bg-white/15 text-white whitespace-nowrap cursor-pointer`
-                    : `${base} px-3 sm:px-4 py-1.5 rounded-full font-sans text-xs tracking-wider transition-all border border-transparent text-white/55 hover:text-white hover:bg-white/5 whitespace-nowrap cursor-pointer`;
-            });
-        }
-
-        // 都市データをUI全体へ反映
-        function applyCityData(city) {
-            CITIES[currentCityKey] = city;
-            document.getElementById('city-title').textContent = city.name;
-            document.getElementById('coord-label').textContent = city.coords;
-            document.querySelectorAll('.hi-temp-val').forEach(el => el.textContent = `${city.high}°`);
-            document.querySelectorAll('.lo-temp-val').forEach(el => el.textContent = `${city.low}°`);
-            document.getElementById('metric-sunrise').textContent = city.sunrise;
-            document.getElementById('metric-sunset').textContent = city.sunset;
-            document.getElementById('metric-aqi').textContent = city.aqi;
-            document.getElementById('metric-aqi-mobile').textContent = `AQI ${city.aqi}`;
-            document.getElementById('editorial-note').textContent = city.note;
-
-            renderScrubberTicks(city.slots);
-            renderTempCurve(city.slots);
-            setTimeSlot(currentSlotIndex);
-        }
-
-        // Open-Meteo API から今日1日の気象データ＆空気質を取得してアプリ形式に変換
-        async function fetchLiveWeather(lat, lon, displayName, isTropical = false) {
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,uv_index&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&wind_speed_unit=ms&timezone=auto&forecast_days=1`;
-            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=us_aqi&timezone=auto`;
-
-            const [wRes, aRes] = await Promise.all([
-                fetch(weatherUrl),
-                fetch(aqiUrl).catch(() => null)
-            ]);
-
-            if (!wRes.ok) throw new Error(`HTTP ${wRes.status}`);
-            const wData = await wRes.json();
-
-            // AQI（取得失敗時は良好をデフォルト表示）
-            let aqiLabel = "24 // GOOD";
-            if (aRes && aRes.ok) {
-                try {
-                    const aData = await aRes.json();
-                    const val = Math.round(aData?.current?.us_aqi ?? 24);
-                    const grade = val <= 25 ? 'PURE' : val <= 50 ? 'GOOD' : val <= 100 ? 'FAIR' : 'HAZY';
-                    aqiLabel = `${val} // ${grade}`;
-                } catch (_) {}
-            }
-
             // 8つの時間スロット（03, 06, 09, 12, 15, 18, 21, 23時）を抽出
             const hourIndices = [3, 6, 9, 12, 15, 18, 21, 23];
-            const labels = ["03:00", "06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "24:00"];
-            const phases = ["DEEP NIGHT", "DAWN", "MORNING", "MIDDAY", "AFTERNOON", "DUSK", "EVENING", "MIDNIGHT"];
+            const labels = ["03:00", "06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "23:00"];
+            const phases = ["DEEP NIGHT", "DAWN", "MORNING", "MIDDAY", "AFTERNOON", "DUSK", "EVENING", "LATE NIGHT"];
 
-            const h = wData.hourly;
+            const h = wData.hourly || {};
             const slots = hourIndices.map((hrIdx, idx) => {
-                const code = h.weather_code[hrIdx] ?? 0;
+                const code = h.weather_code?.[hrIdx] ?? 0;
                 const mapped = mapWmoCode(code, idx, isTropical);
-                const deg = Math.round(h.wind_direction_10m[hrIdx] ?? 0);
+                const deg = Math.round(h.wind_direction_10m?.[hrIdx] ?? 0);
                 return {
                     time: labels[idx],
                     phase: phases[idx],
                     sky: mapped.sky,
                     cond: mapped.cond,
-                    temp: Math.round(h.temperature_2m[hrIdx] ?? 15),
-                    feels: Math.round(h.apparent_temperature[hrIdx] ?? 15),
-                    precip: Math.round(h.precipitation_probability[hrIdx] ?? 0),
-                    wind: Number((h.wind_speed_10m[hrIdx] ?? 0).toFixed(1)),
+                    temp: Math.round(h.temperature_2m?.[hrIdx] ?? 15),
+                    feels: Math.round(h.apparent_temperature?.[hrIdx] ?? 15),
+                    precip: Math.round(h.precipitation_probability?.[hrIdx] ?? 0),
+                    wind: Number((h.wind_speed_10m?.[hrIdx] ?? 0).toFixed(1)),
                     dir: degToJaDir(deg),
                     deg: deg,
-                    hum: Math.round(h.relative_humidity_2m[hrIdx] ?? 50),
-                    uv: Math.round(h.uv_index[hrIdx] ?? 0),
+                    hum: Math.round(h.relative_humidity_2m?.[hrIdx] ?? 50),
+                    uv: Math.round(h.uv_index?.[hrIdx] ?? 0),
                     poetic: mapped.poetic,
                     ja: mapped.ja
                 };
             });
 
-            const high = Math.round(wData.daily.temperature_2m_max[0]);
-            const low = Math.round(wData.daily.temperature_2m_min[0]);
-            const sunrise = (wData.daily.sunrise[0] || "T06:30").split('T')[1].slice(0, 5);
-            const sunset = (wData.daily.sunset[0] || "T17:00").split('T')[1].slice(0, 5);
+            const high = Math.round(wData.daily?.temperature_2m_max?.[0] ?? Math.max(...slots.map(s => s.temp)));
+            const low = Math.round(wData.daily?.temperature_2m_min?.[0] ?? Math.min(...slots.map(s => s.temp)));
+            const rawSunrise = wData.daily?.sunrise?.[0] || "T06:30";
+            const rawSunset = wData.daily?.sunset?.[0] || "T17:00";
+            const sunrise = rawSunrise.includes('T') ? rawSunrise.split('T')[1].slice(0, 5) : "06:30";
+            const sunset = rawSunset.includes('T') ? rawSunset.split('T')[1].slice(0, 5) : "17:00";
             const coords = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
 
             return {
@@ -1023,39 +1010,61 @@
             };
         }
 
-        // WMO気象コードをAETHERの空テーマ・詩的表現へ変換
+        // WMO気象コードをAETHERの空テーマ・気象学的に自然な日本語表現へ変換
         function mapWmoCode(code, slotIdx, isTropical) {
             const isNight = slotIdx === 0 || slotIdx >= 6;
             const isDusk = slotIdx === 5;
 
             // 雪（71-77, 85-86）
             if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+                const heavySnow = code === 75 || code === 86;
                 return {
                     cond: 'snow',
                     sky: isNight ? 'night' : isDusk ? 'rain-night' : 'cloudy-day',
                     poetic: isNight ? 'Silent snowflakes drifting under night air' : 'Delicate snowfall veiling the horizon',
-                    ja: '雪の降る静かな空・暖かくしてお過ごしください'
+                    ja: heavySnow ? 'しっかりとした降雪・路面状況と防寒に注意' : '雪の舞う静かな空・暖かくしてお過ごしください'
                 };
             }
-            // 雨・雷雨（51-67, 80-82, 95-99）
-            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) {
+            // 雷雨（95-99）
+            if (code >= 95) {
+                return {
+                    cond: 'rain',
+                    sky: 'rain-night',
+                    poetic: 'Electric atmosphere with passing storms',
+                    ja: '雷を伴う雨・急な突風や激しい雨に注意'
+                };
+            }
+            // 雨・霧雨・にわか雨（51-67, 80-82）
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+                const isDrizzle = code >= 51 && code <= 57;
+                const isShower = code >= 80 && code <= 82;
                 return {
                     cond: 'rain',
                     sky: isNight || isDusk ? 'rain-night' : 'rain-day',
-                    poetic: code >= 95 ? 'Electric atmosphere with passing showers' : 'Silver droplets tracing through soft mist',
-                    ja: code >= 95 ? '雷を伴う雨・急な天候変化に注意' : 'しっとりと降る雨・傘を携えて外出を'
+                    poetic: isDrizzle ? 'Fine mist and gentle drizzle in the air' : 'Silver droplets tracing through soft mist',
+                    ja: isDrizzle ? '霧雨・しっとりとした湿度の高い空' : isShower ? 'にわか雨の恐れ・折り畳み傘があると安心' : '本降りの雨・しっかりとした雨具のご用意を'
                 };
             }
-            // 曇り・霧（2, 3, 45, 48）
-            if (code === 2 || code === 3 || code === 45 || code === 48) {
+            // 霧（45, 48）
+            if (code === 45 || code === 48) {
                 return {
                     cond: 'cloudy',
                     sky: isNight ? 'twilight' : isDusk ? 'cloudy-dusk' : 'cloudy-day',
-                    poetic: code >= 45 ? 'Soft mist resting gently over the landscape' : 'Diffused light filtering through quiet clouds',
-                    ja: code >= 45 ? '霧が立ち込める幻想的な空気' : '柔らかな雲が広がる穏やかな空'
+                    poetic: 'Soft mist resting gently over the landscape',
+                    ja: '霧が立ち込める幻想的な空気・見通しに注意'
                 };
             }
-            // 晴れ（0, 1）
+            // 曇り・薄曇り（2, 3）
+            if (code === 2 || code === 3) {
+                const isOvercast = code === 3;
+                return {
+                    cond: 'cloudy',
+                    sky: isNight ? 'twilight' : isDusk ? 'cloudy-dusk' : 'cloudy-day',
+                    poetic: isOvercast ? 'Quiet overcast sky with diffused light' : 'Soft clouds drifting across open sky',
+                    ja: isOvercast ? '厚めの雲が広がる落ち着いた空模様' : '晴れ間も覗く柔らかな薄曇り'
+                };
+            }
+            // 快晴・晴れ（0, 1）
             const clearSkies = ['night', 'dawn', isTropical ? 'tropical' : 'morning', isTropical ? 'tropical' : 'midday', isTropical ? 'tropical' : 'afternoon', 'sunset', 'twilight', 'night'];
             const poeticBySlot = [
                 'Deep stillness under clear starlight',
@@ -1065,13 +1074,13 @@
                 'Warm afternoon light drifting gently',
                 'Amber twilight melting into indigo',
                 'Velvet evening sky with crisp air',
-                'Tranquil midnight beneath the stars'
+                'Tranquil late night beneath the stars'
             ];
             const jaBySlot = [
                 '澄み切った星空・静かな深夜',
                 '清々しい夜明け・澄んだ朝の空気',
                 '心地よい朝晴れ・爽やかな陽気',
-                '気持ちよく澄み渡る青空',
+                code === 0 ? '雲ひとつない快晴・澄み渡る青空' : '気持ちよく晴れ渡る青空',
                 '柔らかな午後の光・穏やかな陽気',
                 '茜色から藍色へ移ろう美しい夕暮れ',
                 'クリアな夜空・過ごしやすい夜',
@@ -1091,32 +1100,65 @@
             return dirs[Math.round(((deg % 360) / 45)) % 8];
         }
 
-        // 今日の気温・天気からエディトリアル・ライフスタイルノートを自動生成
+        // 気象学標準：Magnus（マグナス）の式による正確な露点温度の算出
+        function calcDewPoint(tempC, rhPercent) {
+            const rh = Math.max(1, Math.min(100, rhPercent));
+            const a = 17.625;
+            const b = 243.04;
+            const alpha = Math.log(rh / 100) + (a * tempC) / (b + tempC);
+            return Math.round((b * alpha) / (a - alpha));
+        }
+
+        // ビューフォート風力階級に基づく風速ステータス
+        function getWindScale(speedMs) {
+            if (speedMs < 0.8) return 'Calm // 静穏';
+            if (speedMs < 3.4) return 'Light Breeze // 穏やか';
+            if (speedMs < 5.5) return 'Gentle Breeze // 心地よい風';
+            if (speedMs < 8.0) return 'Moderate // やや強い風';
+            if (speedMs < 10.8) return 'Fresh Wind // 強めの風';
+            if (speedMs < 13.9) return 'Strong Wind // 強風注意';
+            return 'Gale // 非常に強い風';
+        }
+
+        // 今日の気温・寒暖差・雨雪・強風・UV・乾燥を総合判断したプロ仕様のライフスタイルノート
         function generateDailyNote(high, low, slots) {
             const hasRain = slots.some(s => s.cond === 'rain' || s.precip >= 50);
             const hasSnow = slots.some(s => s.cond === 'snow');
+            const maxWind = Math.max(...slots.map(s => s.wind));
+            const maxUv = Math.max(...slots.map(s => s.uv));
+            const minHum = Math.min(...slots.map(s => s.hum));
             const diff = high - low;
 
             let outfit = '';
-            if (high >= 26) {
-                outfit = '日中は夏のような陽気。リネンシャツや通気性の良い軽やかな装いが映えます。';
-            } else if (high >= 20) {
-                outfit = '過ごしやすい穏やかな一日。薄手のシャツやカーディガンで軽快に出かけられます。';
-            } else if (high >= 14) {
-                outfit = '心地よい涼しさ。ライトコートやウールジャケットなど、羽織り物が活躍する陽気です。';
+            if (high >= 28) {
+                outfit = '日中は真夏のような暑さ。通気性の高い軽やかな装いとこまめな水分補給を心がけて。';
+            } else if (high >= 23) {
+                outfit = '汗ばむほどの暖かな陽気。シャツやリネンなど軽快なスタイルが心地よく映えます。';
+            } else if (high >= 18) {
+                outfit = '過ごしやすい穏やかな一日。薄手のカーディガンやジャケットで快適に外出できます。';
+            } else if (high >= 13) {
+                outfit = '空気はひんやりと爽やか。トレンチやウールジャケットなどの羽織り物が活躍します。';
             } else if (high >= 8) {
-                outfit = '凛とした冷え込みを感じます。暖かなコートにニットやストールを重ねるのがおすすめです。';
+                outfit = '冬らしい冷え込み。暖かなコートにニットやストールを重ねて首元を守ると安心です。';
             } else {
-                outfit = '本格的な冬の寒さ。ダウンコートやマフラーで首元までしっかりと防寒してお過ごしください。';
+                outfit = '厳しい寒さが続きます。ダウンコートや手袋・マフラーで万全の防寒対策を。';
             }
 
             let extra = '';
             if (hasSnow) {
-                extra = '雪が舞う時間帯があるため、足元の滑り対策もお忘れなく。';
+                extra = '雪の降る時間帯があるため、防滑性のある靴でお出かけください。';
             } else if (hasRain) {
-                extra = '雨の予報が出ているため、折り畳み傘と撥水性のあるアウターがあると安心です。';
+                extra = maxWind >= 7
+                    ? '風を伴う雨の予報です。丈夫な傘と撥水性のあるアウターをご用意ください。'
+                    : '雨の予報が出ているため、折り畳み傘を携えると安心です。';
+            } else if (maxWind >= 8) {
+                extra = `最大風速${maxWind.toFixed(1)}m/sと風がやや強まるため、体感温度は数字より低めになります。`;
             } else if (diff >= 9) {
-                extra = `朝晩と日中の寒暖差が${diff}℃と大きいため、脱ぎ着しやすいレイヤードスタイルが快適です。`;
+                extra = `1日の寒暖差が${diff}℃と大きいため、脱ぎ着しやすいレイヤードスタイルが快適です。`;
+            } else if (maxUv >= 6) {
+                extra = '日中は紫外線が強まります。サングラスや日焼け止めでさりげなく対策を。';
+            } else if (minHum <= 35) {
+                extra = '空気が乾燥しやすいため、リップやハンドクリームで保湿ケアをお忘れなく。';
             } else {
                 extra = '大きな天気の崩れはなく、穏やかな光と空気を楽しめる一日になりそうです。';
             }
@@ -1163,6 +1205,7 @@
             // メトリクス更新
             document.getElementById('metric-wind').textContent = slot.wind.toFixed(1);
             document.getElementById('metric-wind-dir').textContent = `${slot.dir}の風`;
+            document.getElementById('metric-wind-scale').textContent = getWindScale(slot.wind);
             document.getElementById('compass-needle').style.transform = `rotate(${slot.deg}deg)`;
 
             document.getElementById('metric-humidity').textContent = slot.hum;
@@ -1171,20 +1214,20 @@
             for (let i = 0; i < segs.length; i++) {
                 segs[i].style.backgroundColor = i < activeSegs ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.12)';
             }
-            const dew = Math.round(slot.temp - ((100 - slot.hum) / 5));
-            const comfort = slot.hum > 75 ? 'しっとり湿潤' : slot.hum < 45 ? 'やや乾燥' : '快適なバランス';
+            const dew = calcDewPoint(slot.temp, slot.hum);
+            const comfort = dew >= 20 ? '蒸し暑い' : slot.hum >= 78 ? 'しっとり湿潤' : slot.hum <= 35 ? '乾燥注意' : '快適なバランス';
             document.getElementById('metric-dew').textContent = `露点 ${dew}°C ・ ${comfort}`;
 
             // UV指数
             document.getElementById('metric-uv').textContent = slot.uv;
-            const uvLabel = slot.uv === 0 ? 'なし' : slot.uv <= 2 ? '弱い' : slot.uv <= 5 ? '中程度' : '強い';
+            const uvLabel = slot.uv === 0 ? 'なし' : slot.uv <= 2 ? '弱い' : slot.uv <= 5 ? '中程度' : slot.uv <= 7 ? '強い' : '非常に強い';
             const uvNote = slot.uv === 0 ? '紫外線対策は不要です' : slot.uv <= 2 ? '穏やかな紫外線量です' : slot.uv <= 5 ? '日中は軽い対策を推奨' : 'サングラスや日焼け止め推奨';
             document.getElementById('metric-uv-label').textContent = uvLabel;
             document.getElementById('metric-uv-note').textContent = uvNote;
-            document.getElementById('uv-indicator').style.left = `${Math.min(slot.uv * 11, 95)}%`;
+            document.getElementById('uv-indicator').style.left = `${Math.min(slot.uv * 10, 95)}%`;
 
-            // 太陽軌道アークの進行度（06:00=index1 〜 18:00=index5 を日中として滑らかに移動）
-            updateSolarArc(index);
+            // 実際の日の出・日の入り時刻に基づいた太陽軌道アークの更新
+            updateSolarArc(slot.time, city.sunrise, city.sunset);
 
             // 空のカラーパレットと天体アート更新
             applySkyPalette(slot.sky, slot.cond);
@@ -1214,6 +1257,10 @@
             root.style.setProperty('--orb-core', palette.core);
             root.style.setProperty('--orb-glow', palette.glow);
 
+            // スマホのステータスバー色（theme-color）を空の色とシームレスに連動
+            const themeMeta = document.getElementById('meta-theme-color');
+            if (themeMeta) themeMeta.setAttribute('content', palette.top);
+
             // 曇り・雨・雪の時はガラスベールを前面に出す
             const veil = document.getElementById('celestial-veil');
             if (condition === 'cloudy' || condition === 'rain' || condition === 'snow') {
@@ -1223,11 +1270,22 @@
             }
         }
 
-        // 太陽軌道アークのドット位置を計算
-        function updateSolarArc(slotIdx) {
-            let t = (slotIdx - 1) / 4;
-            const isDay = t >= 0 && t <= 1;
-            t = Math.max(0, Math.min(1, t));
+        // 時刻文字列（"HH:MM"）を分に変換
+        function timeToMinutes(hhmm) {
+            const [h, m] = (hhmm || "12:00").split(':').map(Number);
+            return (isNaN(h) ? 12 : h) * 60 + (isNaN(m) ? 0 : m);
+        }
+
+        // 実際の日の出・日の入り時刻から太陽軌道アークのドット位置を正確に計算
+        function updateSolarArc(slotTime, sunriseStr, sunsetStr) {
+            const curMin = timeToMinutes(slotTime);
+            const riseMin = timeToMinutes(sunriseStr);
+            const setMin = timeToMinutes(sunsetStr);
+            const daySpan = Math.max(setMin - riseMin, 60);
+
+            const rawT = (curMin - riseMin) / daySpan;
+            const isDay = rawT >= 0 && rawT <= 1;
+            const t = Math.max(0, Math.min(1, rawT));
 
             // 2次ベジェ曲線 P0(14,46), P1(80,-8), P2(146,46)
             const x = Math.pow(1 - t, 2) * 14 + 2 * (1 - t) * t * 80 + Math.pow(t, 2) * 146;
